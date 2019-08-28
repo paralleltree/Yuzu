@@ -47,6 +47,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Collections\AVLTree.cs" />
+    <Compile Include="Drawing\ColorProfile.cs" />
+    <Compile Include="Drawing\DrawingContext.cs" />
+    <Compile Include="Drawing\GraphicsExtensions.cs" />
+    <Compile Include="Drawing\NoteGraphics.cs" />
     <Compile Include="UI\Data\Score.cs" />
     <Compile Include="UI\Data\Track\Field.cs" />
     <Compile Include="UI\Data\Track\FieldWall.cs" />
@@ -83,6 +87,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Yuzu.Core\Yuzu.Core.csproj">
+      <Project>{e8d1bf85-f525-45e9-ab57-aa37b4740550}</Project>
+      <Name>Yuzu.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
