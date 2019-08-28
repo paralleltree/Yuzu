@@ -46,6 +46,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Collections\AVLTree.cs" />
+    <Compile Include="UI\Data\Score.cs" />
+    <Compile Include="UI\Data\Track\Field.cs" />
+    <Compile Include="UI\Data\Track\FieldWall.cs" />
+    <Compile Include="UI\Data\Track\IMovableLane.cs" />
+    <Compile Include="UI\Data\Track\INoteContainer.cs" />
+    <Compile Include="UI\Data\Track\SideLane.cs" />
+    <Compile Include="UI\Data\Track\SurfaceLane.cs" />
     <Compile Include="UI\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>

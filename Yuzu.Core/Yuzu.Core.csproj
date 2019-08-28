@@ -42,6 +42,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Track\Field.cs" />
     <Compile Include="Track\FieldLocation.cs" />
     <Compile Include="Track\FieldObject.cs" />
     <Compile Include="Track\Note.cs" />
