@@ -189,7 +189,6 @@ namespace Yuzu.Drawing
             var matrix = prevMatrix.Clone();
             matrix.Translate(point.X, point.Y);
             dc.Graphics.Transform = matrix;
-            dc.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
             using (var outer = new GraphicsPath())
             using (var inner = new GraphicsPath())
@@ -207,7 +206,6 @@ namespace Yuzu.Drawing
             }
 
             dc.Graphics.Transform = prevMatrix;
-            dc.Graphics.SmoothingMode = SmoothingMode.Default;
         }
 
         public static void DrawBell(this DrawingContext dc, PointF point, float size)
