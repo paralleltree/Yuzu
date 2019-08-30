@@ -22,13 +22,13 @@ namespace Yuzu.UI.Operations
         public abstract void Undo();
     }
 
-    internal class MoveFieldObject : FieldObjectOperationBase
+    internal class MoveFieldObjectOperation : FieldObjectOperationBase
     {
         public override string Description => "オブジェクトの移動";
         protected FieldPoint BeforePosition { get; }
         protected FieldPoint AfterPosition { get; }
 
-        public MoveFieldObject(FieldObject obj, int beforeTick, int beforeOffset, int afterTick, int afterOffset)
+        public MoveFieldObjectOperation(FieldObject obj, int beforeTick, int beforeOffset, int afterTick, int afterOffset)
             : base(obj)
         {
             BeforePosition = new FieldPoint() { Tick = beforeTick, LaneOffset = beforeOffset };

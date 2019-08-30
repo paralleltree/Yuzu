@@ -17,6 +17,7 @@
             {
                 components.Dispose();
             }
+            if (disposing) CompositeDisposable.Dispose();
             base.Dispose(disposing);
         }
 

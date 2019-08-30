@@ -92,6 +92,7 @@
     <Compile Include="UI\Operations\NoteOperations.cs" />
     <Compile Include="UI\Operations\LaneOperations.cs" />
     <Compile Include="UI\Operations\OperationManager.cs" />
+    <Compile Include="UI\PlaneExtensions.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
