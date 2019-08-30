@@ -87,7 +87,10 @@
     <Compile Include="UI\NoteView.Designer.cs">
       <DependentUpon>NoteView.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Operations\FieldObjectOperations.cs" />
     <Compile Include="UI\Operations\IOperation.cs" />
+    <Compile Include="UI\Operations\NoteOperations.cs" />
+    <Compile Include="UI\Operations\LaneOperations.cs" />
     <Compile Include="UI\Operations\OperationManager.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
