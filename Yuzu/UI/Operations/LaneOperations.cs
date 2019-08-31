@@ -130,4 +130,40 @@ namespace Yuzu.UI.Operations
             Collection.Remove(SideLane);
         }
     }
+
+    internal abstract class SurfaceLaneCollectionOperationBase : IOperation
+    {
+        public abstract string Description { get; }
+        protected Data.Track.SurfaceLane SurfaceLane { get; }
+        protected List<Data.Track.SurfaceLane> Collection { get; }
+
+        protected SurfaceLaneCollectionOperationBase(Data.Track.SurfaceLane lane, List<Data.Track.SurfaceLane> collection)
+        {
+            SurfaceLane = lane;
+            Collection = collection;
+        }
+
+        public abstract void Redo();
+        public abstract void Undo();
+    }
+
+    internal class AddSurfaceLaneOperation : SurfaceLaneCollectionOperationBase
+    {
+        public override string Description => "レーンの追加";
+
+        public AddSurfaceLaneOperation(Data.Track.SurfaceLane lane, List<Data.Track.SurfaceLane> collection)
+            : base(lane, collection)
+        {
+        }
+
+        public override void Redo()
+        {
+            Collection.Add(SurfaceLane);
+        }
+
+        public override void Undo()
+        {
+            Collection.Remove(SurfaceLane);
+        }
+    }
 }

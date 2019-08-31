@@ -30,6 +30,8 @@ namespace Yuzu.UI
         private bool editable = true;
         private EditMode editMode;
         private EditTarget editTarget;
+        private NewNoteType newNoteType;
+        private SurfaceLaneColor newSurfaceLaneColor;
         private ColorProfile colorProfile;
 
 
@@ -109,6 +111,23 @@ namespace Yuzu.UI
                 editTarget = value;
             }
         }
+        public NewNoteType NewNoteType
+        {
+            get { return newNoteType; }
+            set
+            {
+                newNoteType = value;
+            }
+        }
+        public SurfaceLaneColor NewSurfaceLaneColor
+        {
+            get { return newSurfaceLaneColor; }
+            set
+            {
+                newSurfaceLaneColor = value;
+            }
+        }
+        public HorizontalDirection FlickDirection { get; set; }
 
         public ColorProfile ColorProfile
         {
@@ -124,7 +143,7 @@ namespace Yuzu.UI
         public SizeF FlickSize { get; set; } = new Size(56, 8);
         public float CircularObjectSize { get; set; } = 11;
         public Color StepColor { get; set; } = Color.FromArgb(224, 224, 224);
-        public float StepRadius { get; set; } = 4;
+        public float StepRadius { get; set; } = 5;
 
         protected bool IsDrawObjects => !Editable || (editTarget & (EditTarget.Field | EditTarget.Lane | EditTarget.Note)) == 0;
         protected bool IsDrawNotes => !Editable || (EditTarget & (EditTarget.Field | EditTarget.Lane)) == 0;
@@ -201,6 +220,11 @@ namespace Yuzu.UI
         protected int GetTickFromYPosition(float y)
         {
             return (int)(y * TicksPerBeat / HeightPerBeat);
+        }
+
+        protected int GetOffsetFromXPosition(float x)
+        {
+            return (int)Math.Round(x * HorizontalResolution / HalfLaneWidth);
         }
 
         protected int GetQuantizedTick(int tick)
@@ -524,6 +548,8 @@ namespace Yuzu.UI
                     Matrix matrix = GetDrawingMatrix(new Matrix(), true);
                     matrix.Invert();
                     PointF pos = matrix.TransformPoint(p.Location);
+                    float halfEditWidth = HalfLaneWidth + StepRadius;
+                    if (pos.X < -halfLaneWidth || pos.X > halfLaneWidth) return Observable.Empty<MouseEventArgs>();
 
                     // 既存オブジェクト操作
                     // レーン系Step移動の際は2分木の構造を崩さない範囲のTick移動しか認めない
@@ -586,6 +612,99 @@ namespace Yuzu.UI
                             }
                             break;
                     }
+
+                    // 新規追加
+                    switch (EditTarget)
+                    {
+                        case EditTarget.Field:
+                        case EditTarget.Lane:
+                            if (EditTarget == EditTarget.Field)
+                            {
+                                var subscription = InsertLaneStep(Score.Field.Left.FieldWall.Points, pos, tailTick, false);
+                                if (subscription != null) return subscription;
+                                subscription = InsertLaneStep(Score.Field.Right.FieldWall.Points, pos, tailTick, false);
+                                if (subscription != null) return subscription;
+                            }
+                            else
+                            {
+                                var subscription = InsertSideLane(Score.Field.Left, pos, tailTick);
+                                if (subscription != null) return subscription;
+                                subscription = InsertSideLane(Score.Field.Right, pos, tailTick);
+                                if (subscription != null) return subscription;
+                            }
+                            foreach (var lane in Score.SurfaceLanes)
+                            {
+                                var subscription = InsertLaneStep(lane.Points, pos, tailTick, true);
+                                if (subscription != null) return subscription;
+                            }
+                            {
+                                // RGBレーンの追加
+                                var lane = new Data.Track.SurfaceLane() { LaneColor = NewSurfaceLaneColor };
+                                var start = new FieldPoint()
+                                {
+                                    Tick = GetQuantizedTick(GetTickFromYPosition(pos.Y)),
+                                    LaneOffset = GetOffsetFromXPosition(pos.X)
+                                };
+                                var end = new FieldPoint()
+                                {
+                                    Tick = start.Tick + QuantizeTick,
+                                    LaneOffset = start.LaneOffset
+                                };
+                                lane.Points.Add(start);
+                                lane.Points.Add(end);
+                                Score.SurfaceLanes.Add(lane);
+                                Invalidate();
+                                return HandleFieldPoint(end, start.Tick + 1, -1, false)
+                                    .Finally(() => OperationManager.Push(new AddSurfaceLaneOperation(lane, Score.SurfaceLanes)));
+                            }
+
+                        case EditTarget.Note:
+                            {
+                                var subscription = InsertSideNote(Score.Field.Left, pos, tailTick);
+                                if (subscription != null) return subscription;
+                                subscription = InsertSideNote(Score.Field.Right, pos, tailTick);
+                                if (subscription != null) return subscription;
+                            }
+                            foreach (var lane in Score.SurfaceLanes)
+                            {
+                                var subscription = InsertSurfaceNote(lane, pos, tailTick);
+                                if (subscription != null) return subscription;
+                            }
+                            break;
+
+                        default:
+                            FieldObject obj = null;
+                            IOperation op = null;
+                            switch (EditTarget)
+                            {
+                                case EditTarget.Flick:
+                                    var flick = new Flick() { Direction = FlickDirection };
+                                    op = new AddFieldObjectOperation<Flick>(flick, Score.Flicks);
+                                    obj = flick;
+                                    break;
+
+                                case EditTarget.Bell:
+                                    var bell = new Bell();
+                                    op = new AddFieldObjectOperation<Bell>(bell, Score.Bells);
+                                    obj = bell;
+                                    break;
+
+                                case EditTarget.Bullet:
+                                    var bullet = new Bullet();
+                                    op = new AddFieldObjectOperation<Bullet>(bullet, Score.Bullets);
+                                    obj = bullet;
+                                    break;
+                            }
+                            obj.Position = new FieldPoint()
+                            {
+                                Tick = GetQuantizedTick(GetTickFromYPosition(pos.Y)),
+                                LaneOffset = GetOffsetFromXPosition(pos.X)
+                            };
+                            op.Redo();
+                            Invalidate();
+                            return HandleFieldObject(obj).Finally(() => OperationManager.Push(op));
+                    }
+
                     return Observable.Empty<MouseEventArgs>();
                 }).Subscribe(p => Invalidate());
 
@@ -596,7 +715,7 @@ namespace Yuzu.UI
                 {
                     var stepRect = GetPositionFromFieldPoint(step).GetCenteredRect(StepRadius * 2);
                     if (!stepRect.Contains(clicked)) continue;
-                    (int minTick, int maxTick) = GetAroundPointTick(points, step);
+                    (int minTick, int maxTick) = GetAroundPointTick(points, step, true);
                     int beforeTick = step.Tick;
                     int beforeOffset = step.LaneOffset;
                     return HandleFieldPoint(step, minTick + 1, maxTick == -1 ? -1 : maxTick - 1, true)
@@ -617,7 +736,7 @@ namespace Yuzu.UI
                     if (!stepRect.Contains(clicked)) continue;
 
                     // レーン外に存在するNoteが出ないようにハンドル
-                    (int minTick, int maxTick) = GetAroundPointTick(lane.Points, step);
+                    (int minTick, int maxTick) = GetAroundPointTick(lane.Points, step, true);
                     if (minTick != -1) minTick += 1;
                     if (maxTick != -1) maxTick -= 1;
                     if (step == lane.Points.GetFirst() && lane.Notes.Count > 0)
@@ -640,6 +759,24 @@ namespace Yuzu.UI
                 }
                 return null;
             }
+            IObservable<MouseEventArgs> InsertLaneStep(AVLTree<FieldPoint> points, PointF clicked, int tailTick, bool limitEdge)
+            {
+                var lines = GetInterpolatedLines(points, Math.Max(HeadTick, points.GetFirst().Tick), limitEdge ? Math.Min(tailTick, points.GetLast().Tick) : tailTick);
+                var path = lines.ExpandLinesWidth(StepRadius * 2);
+                if (!path.IsVisible(clicked)) return null;
+                var point = new FieldPoint()
+                {
+                    Tick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
+                    LaneOffset = GetOffsetFromXPosition(clicked.X)
+                };
+                (int minTick, int maxTick) = GetAroundPointTick(points, point, false);
+                if (maxTick == -1 && limitEdge) maxTick = points.GetLast().Tick;
+                if (point.Tick <= minTick || (maxTick >= 0 && point.Tick >= maxTick)) return null;
+                points.Add(point);
+                Invalidate();
+                return HandleFieldPoint(point, minTick + 1, maxTick == -1 ? -1 : maxTick - 1, false)
+                    .Finally(() => OperationManager.Push(new InsertLaneStepOperation(point, points)));
+            }
             IObservable<MouseEventArgs> HandleFieldPoint(FieldPoint fp, int minTick, int maxTick, bool holdZero)
             {
                 return mouseMove.TakeUntil(mouseUp).Do(p =>
@@ -655,17 +792,18 @@ namespace Yuzu.UI
                     fp.Tick = holdZero && fp.Tick == 0 ? 0 : tick;
                 });
             }
-            (int, int) GetAroundPointTick(AVLTree<FieldPoint> points, FieldPoint fp)
+            (int, int) GetAroundPointTick(AVLTree<FieldPoint> points, FieldPoint fp, bool contained)
             {
                 // あるノードの前後のノードにおけるTickを取得する
                 // 該当するノードが存在しないならば-1を返す。
+                // contained: fpがpointsに含まれるならばTrue
                 int min = -1;
                 int max = -1;
                 int count = -1;
-                foreach (var p in points.EnumerateFrom(fp.Tick - 1))
+                foreach (var p in points.EnumerateFrom(contained ? fp.Tick - 1 : fp.Tick))
                 {
                     count++;
-                    if (p.Tick == fp.Tick) continue;
+                    if (contained && p.Tick == fp.Tick) continue;
                     if (count == 0)
                     {
                         min = p.Tick;
@@ -718,6 +856,25 @@ namespace Yuzu.UI
                 }
                 return null;
             }
+            IObservable<MouseEventArgs> InsertSideLane(Data.Track.FieldSide fs, PointF clicked, int tailTick)
+            {
+                var lines = GetInterpolatedLines(fs.FieldWall.Points, HeadTick, tailTick);
+                var path = lines.ExpandLinesWidth(StepRadius * 2);
+                if (!path.IsVisible(clicked)) return null;
+                var range = new TickRange()
+                {
+                    StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
+                    Duration = QuantizeTick
+                };
+                int minTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault()?.ValidRange.EndTick + 1 ?? -1;
+                int maxTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault(p => p.ValidRange.StartTick >= range.StartTick)?.ValidRange.StartTick - 1 ?? -1;
+                if ((minTick != -1 && range.StartTick < minTick) || (maxTick != -1 && range.EndTick > maxTick)) return null;
+                var lane = new Data.Track.SideLane() { ValidRange = range };
+                fs.SideLanes.Add(lane);
+                Invalidate();
+                return HandleSideLaneGuideRange(range, minTick, maxTick, false)
+                    .Finally(() => OperationManager.Push(new InsertSideLaneOperation(lane, fs.SideLanes)));
+            }
             IObservable<MouseEventArgs> HandleSideLaneGuideRange(TickRange range, int minTick, int maxTick, bool isHead)
             {
                 int startTick = range.StartTick;
@@ -730,11 +887,11 @@ namespace Yuzu.UI
                     if ((minTick >= 0 && tick < minTick) || (maxTick >= 0 && tick > maxTick)) return;
                     if (isHead)
                     {
-                        if (tick > endTick) return;
+                        if (tick >= endTick) return;
                     }
                     else
                     {
-                        if (tick < startTick) return;
+                        if (tick <= startTick) return;
                     }
                     if (isHead) range.StartTick = tick;
                     range.Duration = isHead ? endTick - tick : tick - startTick;
@@ -775,6 +932,30 @@ namespace Yuzu.UI
                             return HandleHoldEnd(note, maxDuration);
                         }
                     }
+                }
+                return null;
+            }
+            IObservable<MouseEventArgs> InsertSideNote(Data.Track.FieldSide fs, PointF clicked, int tailTick)
+            {
+                foreach (var lane in fs.SideLanes)
+                {
+                    var lines = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, lane.ValidRange.StartTick), Math.Min(tailTick, lane.ValidRange.EndTick));
+                    var path = lines.ExpandLinesWidth(StepRadius * 2);
+                    if (!path.IsVisible(clicked)) return null;
+                    var range = new TickRange()
+                    {
+                        StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
+                        Duration = NewNoteType == NewNoteType.Tap ? 0 : QuantizeTick
+                    };
+                    (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
+                    minTick = minTick == -1 ? lane.ValidRange.StartTick : minTick + 1;
+                    maxTick = maxTick == -1 ? lane.ValidRange.EndTick : maxTick - 1;
+                    if (range.StartTick < minTick || range.EndTick > maxTick) return null;
+                    var note = new Note() { TickRange = range };
+                    lane.Notes.Add(note);
+                    Invalidate();
+                    var handler = NewNoteType == NewNoteType.Tap ? HandleNote(note, minTick, maxTick) : HandleHoldEnd(note, maxTick - range.StartTick);
+                    return handler.Finally(() => OperationManager.Push(new InsertNoteOperation(note, lane.Notes)));
                 }
                 return null;
             }
@@ -824,6 +1005,26 @@ namespace Yuzu.UI
                 }
                 return null;
             }
+            IObservable<MouseEventArgs> InsertSurfaceNote(Data.Track.SurfaceLane lane, PointF clicked, int tailTick)
+            {
+                var lines = GetInterpolatedLines(lane.Points, Math.Max(HeadTick, lane.Points.GetFirst().Tick), Math.Min(tailTick, lane.Points.GetLast().Tick));
+                var path = lines.ExpandLinesWidth(StepRadius * 2);
+                if (!path.IsVisible(clicked)) return null;
+                var range = new TickRange()
+                {
+                    StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
+                    Duration = NewNoteType == NewNoteType.Tap ? 0 : QuantizeTick
+                };
+                (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
+                minTick = minTick == -1 ? lane.Points.GetFirst().Tick : minTick + 1;
+                maxTick = maxTick == -1 ? lane.Points.GetLast().Tick : maxTick - 1;
+                if (range.StartTick < minTick || range.EndTick > maxTick) return null;
+                var note = new Note() { TickRange = range };
+                lane.Notes.Add(note);
+                Invalidate();
+                var handler = newNoteType == NewNoteType.Tap ? HandleNote(note, minTick, maxTick) : HandleHoldEnd(note, maxTick - range.StartTick);
+                return handler.Finally(() => OperationManager.Push(new InsertNoteOperation(note, lane.Notes)));
+            }
             IObservable<MouseEventArgs> HandleNote(Note note, int minTick, int maxTick)
             {
                 return mouseMove.TakeUntil(mouseUp).Do(p =>
@@ -846,6 +1047,16 @@ namespace Yuzu.UI
                     if (duration <= 0 || duration > maxDuration) return;
                     note.TickRange.Duration = duration;
                 });
+            }
+            (int, int) GetAroundNoteTick(AVLTree<Note> notes, int tick)
+            {
+                int minTick = -1;
+                int maxTick = -1;
+                var prev = notes.EnumerateFrom(tick).FirstOrDefault();
+                if (prev != null) minTick = prev.TickRange.EndTick;
+                var next = notes.EnumerateFrom(tick).FirstOrDefault(p => p.TickRange.StartTick >= tick);
+                if (next != null) maxTick = next.TickRange.StartTick;
+                return (minTick, maxTick);
             }
 
             IObservable<MouseEventArgs> MoveFlick(Flick flick, PointF clicked)
@@ -907,6 +1118,12 @@ namespace Yuzu.UI
         Flick = 1 << 3,
         Bell = 1 << 4,
         Bullet = 1 << 5
+    }
+
+    internal enum NewNoteType
+    {
+        Tap,
+        Hold
     }
 
     internal static class DrawingExtensions
