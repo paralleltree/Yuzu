@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Yuzu.Collections;
 using Yuzu.Core.Track;
 using Yuzu.UI.Data.Track;
 
@@ -48,6 +49,27 @@ namespace Yuzu.UI.Operations
         }
     }
 
+    internal class InsertLaneStepOperation : LaneStepOperationBase
+    {
+        public override string Description => "レーン制御点の追加";
+        protected AVLTree<FieldPoint> Collection { get; }
+
+        public InsertLaneStepOperation(FieldPoint fp, AVLTree<FieldPoint> collection) : base(fp)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Add(FieldPoint);
+        }
+
+        public override void Undo()
+        {
+            Collection.Remove(FieldPoint);
+        }
+    }
+
     internal abstract class SideLaneGuideOperationBase : IOperation
     {
         public abstract string Description { get; }
@@ -85,6 +107,27 @@ namespace Yuzu.UI.Operations
         {
             SideLane.ValidRange.StartTick = Before.StartTick;
             SideLane.ValidRange.Duration = Before.Duration;
+        }
+    }
+
+    internal class InsertSideLaneOperation : SideLaneGuideOperationBase
+    {
+        public override string Description => "サイドレーンの追加";
+        protected AVLTree<Data.Track.SideLane> Collection { get; }
+
+        public InsertSideLaneOperation(Data.Track.SideLane lane, AVLTree<Data.Track.SideLane> collection) : base(lane)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Add(SideLane);
+        }
+
+        public override void Undo()
+        {
+            Collection.Remove(SideLane);
         }
     }
 }

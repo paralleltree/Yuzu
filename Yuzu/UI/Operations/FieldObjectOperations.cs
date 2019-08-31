@@ -8,12 +8,12 @@ using Yuzu.Core.Track;
 
 namespace Yuzu.UI.Operations
 {
-    internal abstract class FieldObjectOperationBase : IOperation
+    internal abstract class FieldObjectOperationBase<T> : IOperation where T : FieldObject
     {
         public abstract string Description { get; }
-        protected FieldObject FieldObject { get; }
+        protected T FieldObject { get; }
 
-        protected FieldObjectOperationBase(FieldObject obj)
+        protected FieldObjectOperationBase(T obj)
         {
             FieldObject = obj;
         }
@@ -22,7 +22,7 @@ namespace Yuzu.UI.Operations
         public abstract void Undo();
     }
 
-    internal class MoveFieldObjectOperation : FieldObjectOperationBase
+    internal class MoveFieldObjectOperation : FieldObjectOperationBase<FieldObject>
     {
         public override string Description => "オブジェクトの移動";
         protected FieldPoint BeforePosition { get; }
@@ -45,6 +45,27 @@ namespace Yuzu.UI.Operations
         {
             FieldObject.Position.Tick = BeforePosition.Tick;
             FieldObject.Position.LaneOffset = BeforePosition.LaneOffset;
+        }
+    }
+
+    internal class AddFieldObjectOperation<T> : FieldObjectOperationBase<T> where T : FieldObject
+    {
+        public override string Description => "オブジェクトの追加";
+        protected List<T> Collection { get; }
+
+        public AddFieldObjectOperation(T obj, List<T> collection) : base(obj)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Add(FieldObject);
+        }
+
+        public override void Undo()
+        {
+            Collection.Remove(FieldObject);
         }
     }
 }

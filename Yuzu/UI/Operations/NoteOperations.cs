@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Yuzu.Collections;
 using Yuzu.Core.Track;
 
 namespace Yuzu.UI.Operations
@@ -45,6 +46,27 @@ namespace Yuzu.UI.Operations
         {
             Note.TickRange.StartTick = Before.StartTick;
             Note.TickRange.Duration = Before.Duration;
+        }
+    }
+
+    internal class InsertNoteOperation : NoteOperationBase
+    {
+        public override string Description => "ノートの追加";
+        protected AVLTree<Note> Collection { get; }
+
+        public InsertNoteOperation(Note note, AVLTree<Note> collection) : base(note)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Add(Note);
+        }
+
+        public override void Undo()
+        {
+            Collection.Remove(Note);
         }
     }
 }
