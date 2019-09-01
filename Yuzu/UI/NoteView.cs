@@ -905,10 +905,7 @@ namespace Yuzu.UI
                 {
                     foreach (var note in lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick))
                     {
-                        var startPoints = fs.FieldWall.Points.EnumerateFrom(note.TickRange.StartTick).Take(2).ToList();
-                        float startx = startPoints.Count == 1 ? GetXPositionFromOffset(startPoints[0].LaneOffset) :
-                            GetInterpolated(GetXPositionFromOffset(startPoints[0].LaneOffset), GetXPositionFromOffset(startPoints[1].LaneOffset), (float)(note.TickRange.StartTick - startPoints[0].Tick) / (startPoints[1].Tick - startPoints[0].Tick));
-                        var startRect = new PointF(startx, GetYPositionFromTick(note.TickRange.StartTick)).GetCenteredRect(SideTapSize);
+                        var startRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.StartTick).GetCenteredRect(SideTapSize);
                         if (startRect.Contains(clicked))
                         {
                             int minTick = lane.ValidRange.StartTick;
@@ -920,10 +917,7 @@ namespace Yuzu.UI
                             return HandleNote(note, minTick, maxTick);
                         }
 
-                        var endPoints = fs.FieldWall.Points.EnumerateFrom(note.TickRange.EndTick).Take(2).ToList();
-                        float endx = endPoints.Count == 1 ? GetXPositionFromOffset(endPoints[0].LaneOffset) :
-                            GetInterpolated(GetXPositionFromOffset(endPoints[0].LaneOffset), GetXPositionFromOffset(endPoints[1].LaneOffset), (float)(note.TickRange.EndTick - endPoints[0].Tick) / (endPoints[1].Tick - endPoints[0].Tick));
-                        var endRect = new PointF(endx, GetYPositionFromTick(note.TickRange.EndTick)).GetCenteredRect(SurfaceTapSize);
+                        var endRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.EndTick).GetCenteredRect(SurfaceTapSize);
                         if (endRect.Contains(clicked))
                         {
                             int maxDuration = lane.ValidRange.EndTick - note.TickRange.StartTick;
@@ -964,12 +958,9 @@ namespace Yuzu.UI
                 var notes = lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.EndTick <= tailTick).ToList();
                 foreach (var note in notes)
                 {
-                    var startPoints = lane.Points.EnumerateFrom(note.TickRange.StartTick).Take(2).ToList();
-                    float startx = startPoints.Count == 1 ? GetXPositionFromOffset(startPoints[0].LaneOffset) :
-                        GetInterpolated(GetXPositionFromOffset(startPoints[0].LaneOffset), GetXPositionFromOffset(startPoints[1].LaneOffset), (float)(note.TickRange.StartTick - startPoints[0].Tick) / (startPoints[1].Tick - startPoints[0].Tick));
                     int startTick = note.TickRange.StartTick;
                     int duration = note.TickRange.Duration;
-                    var startRect = new PointF(startx, GetYPositionFromTick(note.TickRange.StartTick)).GetCenteredRect(SurfaceTapSize);
+                    var startRect = GetNotePosition(lane.Points, note.TickRange.StartTick).GetCenteredRect(SurfaceTapSize);
                     if (startRect.Contains(clicked))
                     {
                         int minTick = lane.Points.GetFirst().Tick;
@@ -986,10 +977,7 @@ namespace Yuzu.UI
                             });
                     }
 
-                    var endPoints = lane.Points.EnumerateFrom(note.TickRange.EndTick).Take(2).ToList();
-                    float endx = endPoints.Count == 1 ? GetXPositionFromOffset(endPoints[0].LaneOffset) :
-                        GetInterpolated(GetXPositionFromOffset(endPoints[0].LaneOffset), GetXPositionFromOffset(endPoints[1].LaneOffset), (float)(note.TickRange.EndTick - endPoints[0].Tick) / (endPoints[1].Tick - endPoints[0].Tick));
-                    var endRect = new PointF(endx, GetYPositionFromTick(note.TickRange.EndTick)).GetCenteredRect(SurfaceTapSize);
+                    var endRect = GetNotePosition(lane.Points, note.TickRange.EndTick).GetCenteredRect(SurfaceTapSize);
                     if (endRect.Contains(clicked))
                     {
                         int maxDuration = lane.Points.GetLast().Tick - note.TickRange.StartTick;
@@ -1052,11 +1040,18 @@ namespace Yuzu.UI
             {
                 int minTick = -1;
                 int maxTick = -1;
-                var prev = notes.EnumerateFrom(tick).FirstOrDefault();
+                var prev = notes.EnumerateFrom(tick - 1).FirstOrDefault(p => p.TickRange.EndTick <= tick);
                 if (prev != null) minTick = prev.TickRange.EndTick;
                 var next = notes.EnumerateFrom(tick).FirstOrDefault(p => p.TickRange.StartTick >= tick);
                 if (next != null) maxTick = next.TickRange.StartTick;
                 return (minTick, maxTick);
+            }
+            PointF GetNotePosition(AVLTree<FieldPoint> points, int tick)
+            {
+                var steps = points.EnumerateFrom(tick).Take(2).ToList();
+                float x = steps.Count == 1 ? GetXPositionFromOffset(steps[0].LaneOffset) :
+                    GetInterpolated(GetXPositionFromOffset(steps[0].LaneOffset), GetXPositionFromOffset(steps[1].LaneOffset), (float)(tick - steps[0].Tick) / (steps[1].Tick - steps[0].Tick));
+                return new PointF(x, GetYPositionFromTick(tick));
             }
 
             IObservable<MouseEventArgs> MoveFlick(Flick flick, PointF clicked)
@@ -1098,7 +1093,212 @@ namespace Yuzu.UI
                 });
             }
 
+            var eraseSubscription = mouseDown
+                .Where(p => Editable && p.Button == MouseButtons.Left && EditMode == EditMode.Erase)
+                .SelectMany(p =>
+                {
+                    var mouseDownAt = p.Location;
+                    return mouseMove.TakeUntil(mouseUp).Count().Zip(mouseUp, (q, r) => new { MoveCount = q, MouseUpEventArgs = r });
+                })
+                .Do(p =>
+                {
+                    if (p.MoveCount > 0) return; // ドラッグなしクリックのみ処理
+                    var matrix = GetDrawingMatrix(new Matrix(), true).GetInvertedMatrix();
+                    var pos = matrix.TransformPoint(p.MouseUpEventArgs.Location);
+                    var op = ProcessRemove(pos, TailTick, ModifierKeys == Keys.Shift);
+                    if (op != null) OperationManager.Push(op);
+                }).Subscribe(p => Invalidate());
+
+            IOperation ProcessRemove(PointF clicked, int tailTick, bool shiftPressed)
+            {
+                float halfEditWidth = HalfLaneWidth + StepRadius;
+                if (clicked.X < -halfLaneWidth || clicked.X > halfLaneWidth) return null;
+
+                switch (EditTarget)
+                {
+                    case EditTarget.Field:
+                    case EditTarget.Lane:
+                        // Stepの削除
+                        if (EditTarget == EditTarget.Field)
+                        {
+                            var op = RemoveSideLaneStep(Score.Field.Left, clicked, tailTick) ?? RemoveSideLaneStep(Score.Field.Right, clicked, tailTick);
+                            if (op != null) return op;
+                        }
+                        else
+                        {
+                            var op = RemoveSideLane(Score.Field.Left, clicked, tailTick) ?? RemoveSideLane(Score.Field.Right, clicked, tailTick);
+                            if (op != null) return op;
+                        }
+                        if (shiftPressed)
+                        {
+                            var op = RemoveSurfaceLane(Score.SurfaceLanes, clicked, tailTick);
+                            if (op != null) return op;
+                        }
+                        else
+                        {
+                            foreach (var lane in Score.SurfaceLanes)
+                            {
+                                var op = RemoveSurfaceLaneStep(lane, clicked, tailTick);
+                                if (op != null) return op;
+                            }
+                        }
+                        break;
+
+                    case EditTarget.Note:
+                        foreach (var lane in Score.SurfaceLanes)
+                        {
+                            var op = RemoveSurfaceNote(lane, clicked, tailTick);
+                            if (op != null) return op;
+                        }
+                        {
+                            var op = RemoveSideNote(Score.Field.Left, clicked, tailTick) ?? RemoveSideNote(Score.Field.Right, clicked, tailTick);
+                            if (op != null) return op;
+                        }
+                        break;
+
+                    case EditTarget.Flick:
+                    case EditTarget.Bell:
+                    case EditTarget.Bullet:
+                        {
+                            var op = RemoveFieldObject(Score.Bullets, clicked, tailTick, new SizeF(CircularObjectSize, CircularObjectSize)) ??
+                                RemoveFieldObject(Score.Bells, clicked, tailTick, new SizeF(CircularObjectSize, CircularObjectSize)) ??
+                                RemoveFieldObject(Score.Flicks, clicked, tailTick, FlickSize);
+                            return op;
+                        }
+                }
+                return null;
+            }
+
+            IOperation RemoveSideLaneStep(Data.Track.FieldSide fs, PointF clicked, int tailTick)
+            {
+                var steps = fs.FieldWall.Points.EnumerateFrom(HeadTick).TakeUntil(p => p.Tick <= tailTick).ToList();
+                foreach (var step in steps)
+                {
+                    var rect = GetPositionFromFieldPoint(step).GetCenteredRect(StepRadius * 2);
+                    if (!rect.Contains(clicked)) continue;
+                    var op = new RemoveLaneStepOperation(step, fs.FieldWall.Points);
+                    op.Redo();
+                    return op;
+                }
+                return null;
+            }
+            IOperation RemoveSurfaceLaneStep(Data.Track.SurfaceLane lane, PointF clicked, int tailTick)
+            {
+                var steps = lane.Points.EnumerateFrom(HeadTick).TakeUntil(p => p.Tick <= tailTick).ToList();
+                foreach (var step in steps)
+                {
+                    var rect = GetPositionFromFieldPoint(step).GetCenteredRect(StepRadius * 2);
+                    if (!rect.Contains(clicked)) continue;
+                    if (lane.Points.Count == 2)
+                    {
+                        var laneOp = new RemoveSurfaceLaneOperation(lane, Score.SurfaceLanes);
+                        laneOp.Redo();
+                        return laneOp;
+                    }
+                    if (step.Tick == lane.Points.GetFirst().Tick)
+                    {
+                        int nextTick = lane.Points.Skip(1).First().Tick;
+                        if (lane.Notes.Count > 0 && lane.Notes.GetFirst().TickRange.StartTick < nextTick) continue;
+                    }
+                    if (step.Tick == lane.Points.GetLast().Tick)
+                    {
+                        int prevTick = lane.Points.EnumerateFrom(lane.Points.GetLast().Tick - 1).First().Tick;
+                        if (lane.Notes.Count > 0 && lane.Notes.GetLast().TickRange.EndTick > prevTick) continue;
+                    }
+                    var op = new RemoveLaneStepOperation(step, lane.Points);
+                    op.Redo();
+                    return op;
+                }
+                return null;
+            }
+            IOperation RemoveSideLane(Data.Track.FieldSide fs, PointF clicked, int tailTick)
+            {
+                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick).ToList())
+                {
+                    var lines = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, lane.ValidRange.StartTick), Math.Min(tailTick, lane.ValidRange.EndTick));
+                    var path = lines.ExpandLinesWidth(StepRadius * 2);
+                    if (!path.IsVisible(clicked)) continue;
+                    var op = new RemoveSideLaneOperation(lane, fs.SideLanes);
+                    op.Redo();
+                    Invalidate();
+                    return op;
+                }
+                return null;
+            }
+            IOperation RemoveSurfaceLane(List<Data.Track.SurfaceLane> lanes, PointF clicked, int tailTick)
+            {
+                foreach (var lane in lanes)
+                {
+                    var lines = GetInterpolatedLines(lane.Points, Math.Max(HeadTick, lane.Points.GetFirst().Tick), Math.Min(tailTick, lane.Points.GetLast().Tick));
+                    var path = lines.ExpandLinesWidth(StepRadius * 2);
+                    if (!path.IsVisible(clicked)) continue;
+                    var op = new RemoveSurfaceLaneOperation(lane, Score.SurfaceLanes);
+                    op.Redo();
+                    return op;
+                }
+                return null;
+            }
+            IOperation RemoveSideNote(Data.Track.FieldSide fs, PointF clicked, int tailTick)
+            {
+                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick))
+                {
+                    var notes = lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick).ToList();
+                    foreach (var note in notes)
+                    {
+                        var startRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.StartTick).GetCenteredRect(SideTapSize);
+                        var endRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.EndTick).GetCenteredRect(SurfaceTapSize);
+                        var path = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, note.TickRange.StartTick), Math.Min(tailTick, note.TickRange.EndTick)).ExpandLinesWidth(SurfaceTapSize.Width);
+                        if (!startRect.Contains(clicked))
+                        {
+                            if (note.TickRange.Duration == 0) continue;
+                            if (!endRect.Contains(clicked) && !path.IsVisible(clicked)) continue;
+                        }
+
+                        var op = new RemoveNoteOperation(note, lane.Notes);
+                        op.Redo();
+                        Invalidate();
+                        return op;
+                    }
+                }
+                return null;
+            }
+            IOperation RemoveSurfaceNote(Data.Track.SurfaceLane lane, PointF clicked, int tailTick)
+            {
+                var notes = lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick).ToList();
+                foreach (var note in notes)
+                {
+                    var startRect = GetNotePosition(lane.Points, note.TickRange.StartTick).GetCenteredRect(SurfaceTapSize);
+                    var endRect = GetNotePosition(lane.Points, note.TickRange.EndTick).GetCenteredRect(SurfaceTapSize);
+                    var path = GetInterpolatedLines(lane.Points, Math.Max(HeadTick, note.TickRange.StartTick), Math.Min(tailTick, note.TickRange.EndTick)).ExpandLinesWidth(SurfaceTapSize.Width);
+                    if (!startRect.Contains(clicked))
+                    {
+                        if (note.TickRange.Duration == 0) continue;
+                        if (!endRect.Contains(clicked) && !path.IsVisible(clicked)) continue;
+                    }
+
+                    var op = new RemoveNoteOperation(note, lane.Notes);
+                    op.Redo();
+                    Invalidate();
+                    return op;
+                }
+                return null;
+            }
+            IOperation RemoveFieldObject<T>(List<T> objects, PointF clicked, int tailTick, SizeF size) where T : FieldObject
+            {
+                foreach (var obj in objects)
+                {
+                    var rect = GetPositionFromFieldPoint(obj.Position).GetCenteredRect(size);
+                    if (!rect.Contains(clicked)) continue;
+                    var op = new RemoveFieldObjectOperation<T>(obj, objects);
+                    op.Redo();
+                    Invalidate();
+                    return op;
+                }
+                return null;
+            }
+
             CompositeDisposable.Add(editSubscription);
+            CompositeDisposable.Add(eraseSubscription);
         }
     }
 
