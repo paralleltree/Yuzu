@@ -68,4 +68,25 @@ namespace Yuzu.UI.Operations
             Collection.Remove(FieldObject);
         }
     }
+
+    internal class RemoveFieldObjectOperation<T> : FieldObjectOperationBase<T> where T : FieldObject
+    {
+        public override string Description => "オブジェクトの削除";
+        protected List<T> Collection { get; }
+
+        public RemoveFieldObjectOperation(T obj, List<T> collection) : base(obj)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Remove(FieldObject);
+        }
+
+        public override void Undo()
+        {
+            Collection.Add(FieldObject);
+        }
+    }
 }

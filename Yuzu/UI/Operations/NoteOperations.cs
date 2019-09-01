@@ -69,4 +69,25 @@ namespace Yuzu.UI.Operations
             Collection.Remove(Note);
         }
     }
+
+    internal class RemoveNoteOperation : NoteOperationBase
+    {
+        public override string Description => "ノートの削除";
+        protected AVLTree<Note> Collection { get; }
+
+        public RemoveNoteOperation(Note note, AVLTree<Note> collection) : base(note)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Remove(Note);
+        }
+
+        public override void Undo()
+        {
+            Collection.Add(Note);
+        }
+    }
 }

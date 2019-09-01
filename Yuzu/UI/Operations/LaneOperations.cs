@@ -70,6 +70,27 @@ namespace Yuzu.UI.Operations
         }
     }
 
+    internal class RemoveLaneStepOperation : LaneStepOperationBase
+    {
+        public override string Description => "レーン制御点の削除";
+        protected AVLTree<FieldPoint> Collection { get; }
+
+        public RemoveLaneStepOperation(FieldPoint fp, AVLTree<FieldPoint> collection) : base(fp)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Remove(FieldPoint);
+        }
+
+        public override void Undo()
+        {
+            Collection.Add(FieldPoint);
+        }
+    }
+
     internal abstract class SideLaneGuideOperationBase : IOperation
     {
         public abstract string Description { get; }
@@ -131,6 +152,27 @@ namespace Yuzu.UI.Operations
         }
     }
 
+    internal class RemoveSideLaneOperation : SideLaneGuideOperationBase
+    {
+        public override string Description => "サイドレーンの削除";
+        protected AVLTree<Data.Track.SideLane> Collection { get; }
+
+        public RemoveSideLaneOperation(Data.Track.SideLane lane, AVLTree<Data.Track.SideLane> collection) : base(lane)
+        {
+            Collection = collection;
+        }
+
+        public override void Redo()
+        {
+            Collection.Remove(SideLane);
+        }
+
+        public override void Undo()
+        {
+            Collection.Add(SideLane);
+        }
+    }
+
     internal abstract class SurfaceLaneCollectionOperationBase : IOperation
     {
         public abstract string Description { get; }
@@ -164,6 +206,26 @@ namespace Yuzu.UI.Operations
         public override void Undo()
         {
             Collection.Remove(SurfaceLane);
+        }
+    }
+
+    internal class RemoveSurfaceLaneOperation : SurfaceLaneCollectionOperationBase
+    {
+        public override string Description => "レーンの削除";
+
+        public RemoveSurfaceLaneOperation(Data.Track.SurfaceLane lane, List<Data.Track.SurfaceLane> collection)
+            : base(lane, collection)
+        {
+        }
+
+        public override void Redo()
+        {
+            Collection.Remove(SurfaceLane);
+        }
+
+        public override void Undo()
+        {
+            Collection.Add(SurfaceLane);
         }
     }
 }
