@@ -415,7 +415,8 @@ namespace Yuzu.UI
 
                 if (IsDrawSteps)
                 {
-                    dc.DrawSteps(StepColor, lanePoints, StepRadius);
+                    var steps = lane.Points.EnumerateFrom(HeadTick).TakeUntil(p => p.Tick <= tailTick).Select(p => GetPositionFromFieldPoint(p));
+                    dc.DrawSteps(StepColor, steps, StepRadius);
                 }
             }
 
@@ -561,6 +562,11 @@ namespace Yuzu.UI
                     {
                         case EditTarget.Field:
                         case EditTarget.Lane:
+                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            {
+                                var subscription = MoveSurfaceLaneStep(lane, pos, tailTick);
+                                if (subscription != null) return subscription;
+                            }
                             if (EditTarget == EditTarget.Field)
                             {
                                 var subscription = MoveSideLaneStep(Score.Field.Left.FieldWall.Points, pos, tailTick);
@@ -575,23 +581,18 @@ namespace Yuzu.UI
                                 subscription = MoveSideLaneGuide(Score.Field.Right, pos, tailTick);
                                 if (subscription != null) return subscription;
                             }
-                            foreach (var lane in Score.SurfaceLanes)
-                            {
-                                var subscription = MoveSurfaceLaneStep(lane, pos, tailTick);
-                                if (subscription != null) return subscription;
-                            }
                             break;
 
                         case EditTarget.Note:
+                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            {
+                                var subscription = MoveSurfaceNote(lane, pos, tailTick);
+                                if (subscription != null) return subscription;
+                            }
                             {
                                 var subscription = MoveSideNote(Score.Field.Left, pos, tailTick);
                                 if (subscription != null) return subscription;
                                 subscription = MoveSideNote(Score.Field.Right, pos, tailTick);
-                                if (subscription != null) return subscription;
-                            }
-                            foreach (var lane in Score.SurfaceLanes)
-                            {
-                                var subscription = MoveSurfaceNote(lane, pos, tailTick);
                                 if (subscription != null) return subscription;
                             }
                             break;
@@ -599,9 +600,9 @@ namespace Yuzu.UI
                         case EditTarget.Flick:
                         case EditTarget.Bell:
                         case EditTarget.Bullet:
-                            foreach (var flick in Score.Flicks)
+                            foreach (var bullet in Score.Bullets)
                             {
-                                var subscription = MoveFlick(flick, pos);
+                                var subscription = MoveCircularObject(bullet, pos);
                                 if (subscription != null) return subscription;
                             }
                             foreach (var bell in Score.Bells)
@@ -609,9 +610,9 @@ namespace Yuzu.UI
                                 var subscription = MoveCircularObject(bell, pos);
                                 if (subscription != null) return subscription;
                             }
-                            foreach (var bullet in Score.Bullets)
+                            foreach (var flick in Score.Flicks)
                             {
-                                var subscription = MoveCircularObject(bullet, pos);
+                                var subscription = MoveFlick(flick, pos);
                                 if (subscription != null) return subscription;
                             }
                             break;
@@ -622,6 +623,11 @@ namespace Yuzu.UI
                     {
                         case EditTarget.Field:
                         case EditTarget.Lane:
+                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            {
+                                var subscription = InsertLaneStep(lane.Points, pos, tailTick, true);
+                                if (subscription != null) return subscription;
+                            }
                             if (EditTarget == EditTarget.Field)
                             {
                                 var subscription = InsertLaneStep(Score.Field.Left.FieldWall.Points, pos, tailTick, false);
@@ -634,11 +640,6 @@ namespace Yuzu.UI
                                 var subscription = InsertSideLane(Score.Field.Left, pos, tailTick);
                                 if (subscription != null) return subscription;
                                 subscription = InsertSideLane(Score.Field.Right, pos, tailTick);
-                                if (subscription != null) return subscription;
-                            }
-                            foreach (var lane in Score.SurfaceLanes)
-                            {
-                                var subscription = InsertLaneStep(lane.Points, pos, tailTick, true);
                                 if (subscription != null) return subscription;
                             }
                             {
@@ -663,15 +664,15 @@ namespace Yuzu.UI
                             }
 
                         case EditTarget.Note:
+                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            {
+                                var subscription = InsertSurfaceNote(lane, pos, tailTick);
+                                if (subscription != null) return subscription;
+                            }
                             {
                                 var subscription = InsertSideNote(Score.Field.Left, pos, tailTick);
                                 if (subscription != null) return subscription;
                                 subscription = InsertSideNote(Score.Field.Right, pos, tailTick);
-                                if (subscription != null) return subscription;
-                            }
-                            foreach (var lane in Score.SurfaceLanes)
-                            {
-                                var subscription = InsertSurfaceNote(lane, pos, tailTick);
                                 if (subscription != null) return subscription;
                             }
                             break;
