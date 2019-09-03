@@ -34,5 +34,10 @@ namespace Yuzu.UI
                 h => control.MouseUp += h,
                 h => control.MouseUp -= h);
         }
+
+        public static int GetMaximumValue(this ScrollBar bar)
+        {
+            return bar.Maximum - bar.LargeChange + 1;
+        }
     }
 }

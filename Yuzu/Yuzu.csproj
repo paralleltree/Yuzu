@@ -73,6 +73,9 @@
     <Compile Include="UI\Data\Track\INoteContainer.cs" />
     <Compile Include="UI\Data\Track\SideLane.cs" />
     <Compile Include="UI\Data\Track\SurfaceLane.cs" />
+    <Compile Include="UI\Forms\CheckableToolStripSplitButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="UI\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -122,6 +125,39 @@
       <Project>{e8d1bf85-f525-45e9-ab57-aa37b4740550}</Project>
       <Name>Yuzu.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\tap.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\hold.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\red.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\green.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\blue.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\field.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\bell.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\bullet.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\flick-left.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\pencil.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\eraser.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

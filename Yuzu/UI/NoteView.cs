@@ -32,14 +32,15 @@ namespace Yuzu.UI
         private EditTarget editTarget;
         private NewNoteType newNoteType;
         private SurfaceLaneColor newSurfaceLaneColor;
+        private HorizontalDirection flickDirection;
         private ColorProfile colorProfile;
 
 
         protected Data.Score Score { get; set; }
-        protected int TicksPerBeat
+        public int TicksPerBeat
         {
             get { return ticksPerBeat; }
-            set
+            protected set
             {
                 ticksPerBeat = value;
                 Invalidate();
@@ -80,6 +81,7 @@ namespace Yuzu.UI
             set
             {
                 headTick = value;
+                HeadTickChanged?.Invoke(this, EventArgs.Empty);
                 Invalidate();
             }
         }
@@ -101,6 +103,7 @@ namespace Yuzu.UI
             set
             {
                 editMode = value;
+                EditModeChanged?.Invoke(this, EventArgs.Empty);
             }
         }
         public EditTarget EditTarget
@@ -109,6 +112,8 @@ namespace Yuzu.UI
             set
             {
                 editTarget = value;
+                EditTargetChanged?.Invoke(this, EventArgs.Empty);
+                Invalidate();
             }
         }
         public NewNoteType NewNoteType
@@ -117,6 +122,7 @@ namespace Yuzu.UI
             set
             {
                 newNoteType = value;
+                NewNoteTypeChanged?.Invoke(this, EventArgs.Empty);
             }
         }
         public SurfaceLaneColor NewSurfaceLaneColor
@@ -125,9 +131,18 @@ namespace Yuzu.UI
             set
             {
                 newSurfaceLaneColor = value;
+                NewSurfaceLaneColorChanged?.Invoke(this, EventArgs.Empty);
             }
         }
-        public HorizontalDirection FlickDirection { get; set; }
+        public HorizontalDirection FlickDirection
+        {
+            get { return flickDirection; }
+            set
+            {
+                flickDirection = value;
+                FlickDirectionChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
 
         public ColorProfile ColorProfile
         {
@@ -153,7 +168,14 @@ namespace Yuzu.UI
         protected OperationManager OperationManager { get; }
         protected CompositeDisposable CompositeDisposable { get; } = new CompositeDisposable();
 
+        public event EventHandler DragScroll;
         protected event PaintEventHandler PaintFinished;
+        public event EventHandler HeadTickChanged;
+        public event EventHandler EditModeChanged;
+        public event EventHandler EditTargetChanged;
+        public event EventHandler NewNoteTypeChanged;
+        public event EventHandler NewSurfaceLaneColorChanged;
+        public event EventHandler FlickDirectionChanged;
 
         public NoteView(OperationManager operationManager)
         {
@@ -204,6 +226,15 @@ namespace Yuzu.UI
                 Bullet = new FieldObjectColor() { DarkColor = Color.FromArgb(240, 64, 150), LightColor = Color.FromArgb(222, 90, 230) }
             };
         }
+
+        public void Load(Core.Score score)
+        {
+            Score = new Data.Score().Convert(score);
+            TicksPerBeat = Score.TicksPerBeat;
+            HorizontalResolution = Score.HorizontalResolution;
+        }
+
+        public Core.Score Restore() => Score.ConvertBack();
 
         protected float GetYPositionFromTick(int tick)
         {
@@ -544,6 +575,25 @@ namespace Yuzu.UI
             var mouseDown = this.MouseDownAsObservable();
             var mouseMove = this.MouseMoveAsObservable();
             var mouseUp = this.MouseUpAsObservable();
+
+            var dragSubscription = mouseDown
+                .SelectMany(p => mouseMove.TakeUntil(mouseUp)
+                .CombineLatest(Observable.Interval(TimeSpan.FromMilliseconds(200)).TakeUntil(mouseUp), (q, r) => q)
+                .Sample(TimeSpan.FromMilliseconds(200), new ControlScheduler(this))
+                .Do(q =>
+                {
+                    // コントロール端にドラッグされたらスクロールする
+                    if (q.Y <= ClientSize.Height * 0.1)
+                    {
+                        HeadTick += TicksPerBeat;
+                        DragScroll?.Invoke(this, EventArgs.Empty);
+                    }
+                    else if (q.Y >= ClientSize.Height * 0.9)
+                    {
+                        HeadTick -= HeadTick + PaddingHeadTick < TicksPerBeat ? HeadTick + PaddingHeadTick : TicksPerBeat;
+                        DragScroll?.Invoke(this, EventArgs.Empty);
+                    }
+                })).Subscribe();
 
             var editSubscription = mouseDown
                 .Where(p => Editable && p.Button == MouseButtons.Left && EditMode == EditMode.Edit)
