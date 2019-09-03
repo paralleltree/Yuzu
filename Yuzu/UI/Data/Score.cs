@@ -29,5 +29,31 @@ namespace Yuzu.UI.Data
             Bells = new List<Core.Track.Bell>();
             Bullets = new List<Core.Track.Bullet>();
         }
+
+        public Score Convert(Core.Score score)
+        {
+            TicksPerBeat = score.TicksPerBeat;
+            HorizontalResolution = score.HalfHorizontalResolution;
+            Field = Field.Convert(score.Field);
+            SurfaceLanes = score.SurfaceLanes.Select(p => new SurfaceLane().Convert(p)).ToList();
+            Flicks = score.Flicks;
+            Bells = score.Bells;
+            Bullets = score.Bullets;
+            return this;
+        }
+
+        public Core.Score ConvertBack()
+        {
+            return new Core.Score()
+            {
+                TicksPerBeat = TicksPerBeat,
+                HalfHorizontalResolution = HorizontalResolution,
+                Field = Field.ConvertBack(),
+                SurfaceLanes = SurfaceLanes.Select(p => p.ConvertBack()).ToList(),
+                Flicks = Flicks,
+                Bells = Bells,
+                Bullets = Bullets
+            };
+        }
     }
 }

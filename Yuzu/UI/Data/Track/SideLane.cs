@@ -18,5 +18,21 @@ namespace Yuzu.UI.Data.Track
         {
             Notes = new AVLTree<Note>(p => p.TickRange.StartTick);
         }
+
+        public SideLane Convert(Core.Track.SideLane lane)
+        {
+            ValidRange = lane.ValidRange;
+            Notes = new AVLTree<Note>(p => p.TickRange.StartTick, lane.Notes);
+            return this;
+        }
+
+        public Core.Track.SideLane ConvertBack()
+        {
+            return new Core.Track.SideLane()
+            {
+                ValidRange = ValidRange,
+                Notes = Notes.ToList()
+            };
+        }
     }
 }

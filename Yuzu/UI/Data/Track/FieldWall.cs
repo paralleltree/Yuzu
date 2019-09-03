@@ -19,5 +19,21 @@ namespace Yuzu.UI.Data.Track
             Points = new AVLTree<FieldPoint>(p => p.Tick);
             GuardedSections = new AVLTree<TickRange>(p => p.StartTick);
         }
+
+        public FieldWall Convert(Core.Track.FieldWall fw)
+        {
+            Points = new AVLTree<FieldPoint>(p => p.Tick, fw.Points);
+            GuardedSections = new AVLTree<TickRange>(p => p.StartTick, fw.GuardedSections);
+            return this;
+        }
+
+        public Core.Track.FieldWall ConvertBack()
+        {
+            return new Core.Track.FieldWall()
+            {
+                Points = Points.ToList(),
+                GuardedSections = GuardedSections.ToList()
+            };
+        }
     }
 }
