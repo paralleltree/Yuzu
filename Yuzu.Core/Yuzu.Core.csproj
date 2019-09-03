@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -42,11 +45,20 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Score.cs" />
+    <Compile Include="ScoreBook.cs" />
     <Compile Include="Track\Field.cs" />
     <Compile Include="Track\FieldLocation.cs" />
     <Compile Include="Track\FieldObject.cs" />
+    <Compile Include="Track\FieldWall.cs" />
+    <Compile Include="Track\IMovableLane.cs" />
+    <Compile Include="Track\INoteContainer.cs" />
     <Compile Include="Track\Note.cs" />
+    <Compile Include="Track\SideLane.cs" />
     <Compile Include="Track\SurfaceLane.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

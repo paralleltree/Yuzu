@@ -6,9 +6,23 @@ using System.Threading.Tasks;
 
 namespace Yuzu.Core.Track
 {
+    /// <summary>
+    /// フィールド上に存在するオブジェクトを表します。
+    /// </summary>
+    [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptIn)]
     public abstract class FieldObject
     {
-        public FieldPoint Position { get; set; }
+        [Newtonsoft.Json.JsonProperty]
+        private FieldPoint position = new FieldPoint();
+
+        /// <summary>
+        /// このオブジェクトの配置位置を設定します。
+        /// </summary>
+        public FieldPoint Position
+        {
+            get => position;
+            set => position = value;
+        }
     }
 
     public class Bell : FieldObject
@@ -19,10 +33,24 @@ namespace Yuzu.Core.Track
     {
     }
 
+    [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptIn)]
     public class Flick : FieldObject
     {
-        public HorizontalDirection Direction { get; set; }
-        public bool IsCritical { get; set; }
+        [Newtonsoft.Json.JsonProperty]
+        private HorizontalDirection direction;
+        [Newtonsoft.Json.JsonProperty]
+        private bool isCritical;
+
+        public HorizontalDirection Direction
+        {
+            get => direction;
+            set => direction = value;
+        }
+        public bool IsCritical
+        {
+            get => isCritical;
+            set => isCritical = value;
+        }
     }
 
     public enum HorizontalDirection

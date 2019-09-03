@@ -6,37 +6,26 @@ using System.Threading.Tasks;
 
 namespace Yuzu.Core.Track
 {
+    /// <summary>
+    /// フィールドの境界を表します。
+    /// </summary>
     [Newtonsoft.Json.JsonObject(Newtonsoft.Json.MemberSerialization.OptIn)]
-    public class SurfaceLane : IMovableLane, INoteContainer
+    public class FieldWall : IMovableLane
     {
-        [Newtonsoft.Json.JsonProperty]
-        private SurfaceLaneColor laneColor;
         [Newtonsoft.Json.JsonProperty]
         private List<FieldPoint> points = new List<FieldPoint>();
         [Newtonsoft.Json.JsonProperty]
-        private List<Note> notes = new List<Note>();
+        private List<TickRange> guardedSections = new List<TickRange>();
 
-        public SurfaceLaneColor LaneColor
-        {
-            get => laneColor;
-            set => laneColor = value;
-        }
         public List<FieldPoint> Points
         {
             get => points;
             set => points = value;
         }
-        public List<Note> Notes
+        public List<TickRange> GuardedSections
         {
-            get => notes;
-            set => notes = value;
+            get => guardedSections;
+            set => guardedSections = value;
         }
-    }
-
-    public enum SurfaceLaneColor
-    {
-        Red,
-        Green,
-        Blue
     }
 }
