@@ -33,6 +33,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Reactive, Version=4.1.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
@@ -158,6 +161,21 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\eraser.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\disk-black.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\document-plus.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\folder-horizontal-open.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\arrow-curve.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\arrow-curve-180-left.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

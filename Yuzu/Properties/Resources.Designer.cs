@@ -153,6 +153,26 @@ namespace Yuzu.Properties
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap NewIcon {
+            get {
+                object obj = ResourceManager.GetObject("NewIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap OpenIcon {
+            get {
+                object obj = ResourceManager.GetObject("OpenIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap RedLaneIcon {
             get {
                 object obj = ResourceManager.GetObject("RedLaneIcon", resourceCulture);
@@ -163,9 +183,39 @@ namespace Yuzu.Properties
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap RedoIcon {
+            get {
+                object obj = ResourceManager.GetObject("RedoIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap SaveIcon {
+            get {
+                object obj = ResourceManager.GetObject("SaveIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap TapIcon {
             get {
                 object obj = ResourceManager.GetObject("TapIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap UndoIcon {
+            get {
+                object obj = ResourceManager.GetObject("UndoIcon", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

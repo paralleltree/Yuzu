@@ -20,11 +20,32 @@ namespace Yuzu.UI
 {
     internal partial class MainForm : Form
     {
+        private readonly string FileExtension = ".ysf";
+        private string FileTypeFilter => "Yuzu専用形式" + string.Format("({0})|{1}", "*" + FileExtension, "*" + FileExtension);
+
+        private bool isPreviewMode;
+
         private ScoreBook ScoreBook { get; set; }
 
         private OperationManager OperationManager { get; }
         private NoteView NoteView { get; }
         private ScrollBar NoteViewScrollBar { get; }
+
+        private bool IsPreviewMode
+        {
+            get { return isPreviewMode; }
+            set
+            {
+                isPreviewMode = value;
+                NoteView.Editable = !value;
+                NoteView.HeightPerBeat = value ? 48 : 120;
+                NoteView.HalfLaneWidth = value ? 32 : 120;
+                NoteView.SurfaceTapSize = value ? new SizeF(10, 4) : new SizeF(20, 8);
+                NoteView.SideTapSize = value ? new SizeF(7, 13) : new SizeF(14, 26);
+                NoteView.FlickSize = value ? new SizeF(28 - 1, 5 - 1) : new SizeF(56, 8);
+                NoteView.CircularObjectSize = value ? 7 : 11;
+            }
+        }
 
         public MainForm()
         {
@@ -33,6 +54,12 @@ namespace Yuzu.UI
             ToolStripManager.RenderMode = ToolStripManagerRenderMode.System;
 
             OperationManager = new OperationManager();
+            OperationManager.ChangesCommitted += (s, e) => SetText(ScoreBook.Path);
+            OperationManager.OperationHistoryChanged += (s, e) =>
+            {
+                SetText(ScoreBook.Path);
+                NoteView.Invalidate();
+            };
 
             NoteView = new NoteView(OperationManager)
             {
@@ -77,6 +104,7 @@ namespace Yuzu.UI
                 }
             }
 
+            Menu = CreateMainMenu();
             Controls.Add(NoteView);
             Controls.Add(NoteViewScrollBar);
             Controls.Add(CreateEditTargetToolStrip(NoteView));
@@ -94,6 +122,54 @@ namespace Yuzu.UI
             if (OperationManager.IsChanged && !ConfirmDiscardChanges())
             {
                 e.Cancel = true;
+            }
+        }
+
+        protected void Clear()
+        {
+            if (!OperationManager.IsChanged || ConfirmDiscardChanges())
+            {
+                LoadEmptyBook();
+            }
+        }
+
+        protected void OpenFile()
+        {
+            if (OperationManager.IsChanged && !ConfirmDiscardChanges()) return;
+
+            var dialog = new OpenFileDialog()
+            {
+                Filter = FileTypeFilter
+            };
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                LoadFile(dialog.FileName);
+            }
+        }
+
+        protected void LoadFile(string path)
+        {
+            try
+            {
+                if (!ScoreBook.IsCompatible(path))
+                {
+                    MessageBox.Show(this, "現在のバージョンでは開けないファイルです。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                if (ScoreBook.IsUpgradeNeeded(path))
+                {
+                    if (MessageBox.Show(this, "古いバージョンで作成されたファイルです。バージョンアップしてよろしいですか？\n(以前のバージョンでは開けなくなります。)", Program.ApplicationName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.No)
+                    {
+                        return;
+                    }
+                }
+                LoadBook(ScoreBook.LoadFile(path));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "ファイルを読み込むことができませんでした。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Program.DumpExceptionTo(ex, "file_exception.json");
+                LoadEmptyBook();
             }
         }
 
@@ -116,6 +192,37 @@ namespace Yuzu.UI
             score.Field.Left.FieldWall.Points.Add(new FieldPoint() { Tick = 0, LaneOffset = -score.HalfHorizontalResolution });
             score.Field.Right.FieldWall.Points.Add(new FieldPoint() { Tick = 0, LaneOffset = score.HalfHorizontalResolution });
             LoadBook(book);
+        }
+
+        protected void SaveAs()
+        {
+            var dialog = new SaveFileDialog()
+            {
+                Filter = FileTypeFilter
+            };
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                ScoreBook.Path = dialog.FileName;
+                SaveFile();
+                SetText(ScoreBook.Path);
+            }
+        }
+
+        protected void SaveFile()
+        {
+            if (string.IsNullOrEmpty(ScoreBook.Path))
+            {
+                SaveAs();
+                return;
+            }
+            CommitChanges();
+            ScoreBook.Save();
+            OperationManager.CommitChanges();
+        }
+
+        protected void CommitChanges()
+        {
+            ScoreBook.Score = NoteView.Restore();
         }
 
         private void SetText(string path)
@@ -141,8 +248,91 @@ namespace Yuzu.UI
             NoteViewScrollBar.Maximum = NoteViewScrollBar.LargeChange + NoteView.PaddingHeadTick;
         }
 
+        private MainMenu CreateMainMenu()
+        {
+            var fileMenuItems = new MenuItem[]
+            {
+                new MenuItem("新規作成(&N)", (s, e) => Clear()) { Shortcut = Shortcut.CtrlN },
+                new MenuItem("開く(&O)", (s, e) => OpenFile()) { Shortcut = Shortcut.CtrlO },
+                new MenuItem("保存(&S)", (s, e) => SaveFile()) { Shortcut = Shortcut.CtrlS },
+                new MenuItem("名前をつけて保存(&A)", (s, e) => SaveAs()) { Shortcut = Shortcut.CtrlShiftS },
+                new MenuItem("-"),
+                new MenuItem("終了(&X)", (s, e) => Close())
+            };
+
+            var undoItem = new MenuItem("元に戻す", (s, e) => OperationManager.Undo())
+            {
+                Shortcut = Shortcut.CtrlZ,
+                Enabled = false
+            };
+            var redoItem = new MenuItem("やり直す", (s, e) => OperationManager.Redo())
+            {
+                Shortcut = Shortcut.CtrlY,
+                Enabled = false
+            };
+
+            var editMenuItems = new MenuItem[]
+            {
+                undoItem, redoItem
+            };
+
+            var previewItem = new MenuItem("譜面プレビュー", (s, e) =>
+            {
+                IsPreviewMode = !IsPreviewMode;
+                ((MenuItem)s).Checked = IsPreviewMode;
+            }, Shortcut.CtrlP);
+
+            var viewMenuItems = new MenuItem[]
+            {
+                previewItem
+            };
+
+            var helpMenuItems = new MenuItem[]
+            {
+                new MenuItem("Wikiを開く", (s, e) => System.Diagnostics.Process.Start("https://github.com/paralleltree/Yuzu/wiki"), Shortcut.F1),
+            };
+
+            OperationManager.OperationHistoryChanged += (s, e) =>
+            {
+                undoItem.Enabled = OperationManager.CanUndo;
+                redoItem.Enabled = OperationManager.CanRedo;
+            };
+
+            return new MainMenu(new MenuItem[]
+            {
+                new MenuItem("ファイル(&F)", fileMenuItems),
+                new MenuItem("編集(&E)", editMenuItems),
+                new MenuItem("表示(&V)", viewMenuItems),
+                new MenuItem("ヘルプ(&H)", helpMenuItems)
+            });
+        }
+
         private ToolStrip CreateMainToolStrip(NoteView noteView)
         {
+            var newFileButton = new ToolStripButton("新規作成", Resources.NewIcon, (s, e) => Clear())
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image
+            };
+            var openFileButton = new ToolStripButton("開く", Resources.OpenIcon, (s, e) => OpenFile())
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image
+            };
+            var saveFileButton = new ToolStripButton("上書き保存", Resources.SaveIcon, (s, e) => SaveFile())
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image
+            };
+
+            var undoButton = new ToolStripButton("元に戻す", Resources.UndoIcon, (s, e) => OperationManager.Undo())
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Enabled = false
+            };
+            var redoButton = new ToolStripButton("やり直す", Resources.RedoIcon, (s, e) => OperationManager.Redo())
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Enabled = false
+            };
+
             var penButton = new ToolStripButton("ペン", Resources.EditIcon, (s, e) => noteView.EditMode = EditMode.Edit)
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image
@@ -150,6 +340,12 @@ namespace Yuzu.UI
             var eraserButton = new ToolStripButton("消しゴム", Resources.EraserIcon, (s, e) => noteView.EditMode = EditMode.Erase)
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image
+            };
+
+            OperationManager.OperationHistoryChanged += (s, e) =>
+            {
+                undoButton.Enabled = OperationManager.CanUndo;
+                redoButton.Enabled = OperationManager.CanRedo;
             };
 
             noteView.EditModeChanged += (s, e) =>
@@ -160,6 +356,8 @@ namespace Yuzu.UI
 
             return new ToolStrip(new ToolStripItem[]
             {
+                newFileButton, openFileButton, saveFileButton, new ToolStripSeparator(),
+                undoButton, redoButton, new ToolStripSeparator(),
                 penButton, eraserButton
             });
         }

@@ -37,7 +37,13 @@ namespace Yuzu.UI
         private ColorProfile colorProfile;
         private Color barLineColor = Color.FromArgb(160, 160, 160);
         private Color beatLineColor = Color.FromArgb(80, 80, 80);
-
+        private Color highlightColor = Color.FromArgb(250, 250, 90);
+        private Color stepColor = Color.FromArgb(224, 224, 224);
+        private float stepRadius = 5;
+        private SizeF surfaceTapSize = new Size(20, 8);
+        private SizeF sideTapSize = new Size(14, 26);
+        private SizeF flickSize = new Size(56, 8);
+        private float circularObjectSize = 11;
 
         protected Data.Score Score { get; set; }
         public int TicksPerBeat
@@ -174,13 +180,69 @@ namespace Yuzu.UI
                 Invalidate();
             }
         }
-        public SizeF SurfaceTapSize { get; set; } = new Size(20, 8);
-        public SizeF SideTapSize { get; set; } = new Size(14, 26);
-        public SizeF FlickSize { get; set; } = new Size(56, 8);
-        public float CircularObjectSize { get; set; } = 11;
-        public Color StepColor { get; set; } = Color.FromArgb(224, 224, 224);
-        public float StepRadius { get; set; } = 5;
-        public Color HighlightColor { get; set; } = Color.FromArgb(250, 250, 90);
+        public Color HighlightColor
+        {
+            get { return highlightColor; }
+            set
+            {
+                highlightColor = value;
+                Invalidate();
+            }
+        }
+        public Color StepColor
+        {
+            get { return stepColor; }
+            set
+            {
+                stepColor = value;
+                Invalidate();
+            }
+        }
+        public float StepRadius
+        {
+            get { return stepRadius; }
+            set
+            {
+                stepRadius = value;
+                Invalidate();
+            }
+        }
+        public SizeF SurfaceTapSize
+        {
+            get { return surfaceTapSize; }
+            set
+            {
+                surfaceTapSize = value;
+                Invalidate();
+            }
+        }
+        public SizeF SideTapSize
+        {
+            get { return sideTapSize; }
+            set
+            {
+                sideTapSize = value;
+                Invalidate();
+            }
+        }
+        public SizeF FlickSize
+        {
+            get { return flickSize; }
+            set
+            {
+                flickSize = value;
+                Invalidate();
+            }
+        }
+        public float CircularObjectSize
+        {
+            get { return circularObjectSize; }
+            set
+            {
+                circularObjectSize = value;
+                Invalidate();
+            }
+        }
 
         protected bool IsDrawObjects => !Editable || (editTarget & (EditTarget.Field | EditTarget.Lane | EditTarget.Note)) == 0;
         protected bool IsDrawNotes => !Editable || (EditTarget & (EditTarget.Field | EditTarget.Lane)) == 0;
