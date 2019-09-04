@@ -160,6 +160,7 @@ namespace Yuzu.Collections
             if (v.Right != null)
             {
                 (Node u, T max) = RemoveMax(v.Right);
+                v.Right = u;
                 return (BalanceL(v), max);
             }
             else

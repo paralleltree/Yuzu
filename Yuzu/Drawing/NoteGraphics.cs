@@ -165,6 +165,7 @@ namespace Yuzu.Drawing
                 var matrix = prevMatrix.Clone();
 
                 matrix.Translate(rect.Left + rect.Width / 2f, rect.Top + rect.Height / 2f + rect.Height * 2.1f);
+                if (direction == HorizontalDirection.Right) matrix.Scale(-1, 1);
 
                 using (var brush = new SolidBrush(dc.ColorProfile.Flick.DarkColor))
                 using (var pen = new Pen(dc.ColorProfile.Flick.LightColor))

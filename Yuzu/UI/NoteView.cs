@@ -281,6 +281,10 @@ namespace Yuzu.UI
         }
         protected PointF[] GetInterpolatedLines(AVLTree<FieldPoint> line, int start, int end)
         {
+            if (start > end)
+            {
+                throw new ArgumentException("start is larger than end.");
+            }
             // フィールド境界を出してから実際の始点と終点に対して座標を補正する
             var pos = line.EnumerateFrom(start).TakeUntil(p => p.Tick <= end).ToList();
             if ((pos[pos.Count - 1].Tick < end)) ExtendFieldToTail(pos, end);
@@ -293,6 +297,7 @@ namespace Yuzu.UI
             points[last] = tail;
             return points;
         }
+        bool IsLaneVisible(int startTick, int endTick) => startTick <= TailTick && endTick >= HeadTick;
 
 
         protected Matrix GetDrawingMatrix(Matrix baseMatrix, bool flipY)
@@ -334,7 +339,7 @@ namespace Yuzu.UI
                 // 最終フィールド位置から延長した仮想位置定義を追加
                 ExtendFieldToTail(borderPositions, tailTick);
                 var borderPoints = borderPositions.Select(p => GetPositionFromFieldPoint(p)).ToArray();
-                var guardedSections = fs.FieldWall.GuardedSections.EnumerateFrom(HeadTick).TakeUntil(p => p.StartTick <= tailTick).ToList();
+                var guardedSections = fs.FieldWall.GuardedSections.EnumerateFrom(HeadTick).TakeWhile(p => p.StartTick <= tailTick).Where(p => p.EndTick >= HeadTick).ToList();
                 var guardedPoints = guardedSections.Select(p => GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, p.StartTick), Math.Min(tailTick, p.EndTick)));
 
                 using (var fieldRegion = new Region(GetFieldPath(borderPoints, xlimit)))
@@ -399,7 +404,7 @@ namespace Yuzu.UI
 
             void DrawSideGuideLine(Data.Track.FieldSide fs, Color lineColor)
             {
-                var guideSections = fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick).ToList();
+                var guideSections = fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick).ToList();
                 var guidePoints = guideSections.Select(p => GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, p.ValidRange.StartTick), Math.Min(tailTick, p.ValidRange.EndTick)));
 
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
@@ -421,7 +426,7 @@ namespace Yuzu.UI
             }
 
             // RGB
-            var surfaceLanes = Score.SurfaceLanes.Where(p => p.Points.GetFirst().Tick <= tailTick || p.Points.GetLast().Tick >= HeadTick).ToList();
+            var surfaceLanes = Score.SurfaceLanes.Where(p => IsLaneVisible(p.Points.GetFirst().Tick, p.Points.GetLast().Tick)).ToList();
             foreach (var lane in surfaceLanes)
             {
                 DrawSurfaceGuideLine(lane);
@@ -436,12 +441,11 @@ namespace Yuzu.UI
 
             void DrawSurfaceGuideLine(Data.Track.SurfaceLane lane)
             {
-                if (lane.Points.GetFirst().Tick >= tailTick || lane.Points.GetLast().Tick <= HeadTick) return;
                 var lanePoints = GetInterpolatedLines(lane.Points, Math.Max(lane.Points.GetFirst().Tick, HeadTick), Math.Min(lane.Points.GetLast().Tick, tailTick));
 
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
                 using (var pen = new Pen(GetSurfaceLaneColor(lane.LaneColor).GuideColor, 2))
-                    dc.Graphics.DrawLines(pen, lanePoints);
+                    if (lanePoints.Length > 1) dc.Graphics.DrawLines(pen, lanePoints);
                 e.Graphics.SmoothingMode = SmoothingMode.Default;
 
                 if (IsDrawSteps)
@@ -462,15 +466,15 @@ namespace Yuzu.UI
             void DrawSideHoldBackground(Data.Track.FieldSide fs, HoldColor holdColor)
             {
                 dc.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick))
+                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick))
                 {
-                    foreach (var hold in lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick).Where(p => p.TickRange.Duration > 0))
+                    foreach (var hold in lane.Notes.EnumerateFrom(HeadTick).TakeWhile(p => p.TickRange.StartTick <= tailTick).Where(p => p.TickRange.EndTick >= HeadTick && p.TickRange.Duration > 0))
                     {
                         var points = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(hold.TickRange.StartTick, HeadTick), Math.Min(tailTick, hold.TickRange.EndTick));
                         dc.FillHoldBackground(holdColor, points, SurfaceTapSize.Width * 0.85f);
                     }
                 }
-                dc.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                dc.Graphics.SmoothingMode = SmoothingMode.Default;
             }
 
             // RGB
@@ -503,9 +507,9 @@ namespace Yuzu.UI
 
             void DrawSideNotes(Data.Track.FieldSide fs, LaneColor laneColor, HorizontalDirection direction)
             {
-                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick))
+                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick))
                 {
-                    foreach (var note in lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick))
+                    foreach (var note in lane.Notes.EnumerateFrom(HeadTick).TakeWhile(p => p.TickRange.StartTick <= tailTick))
                     {
                         var points = GetInterpolatedLines(fs.FieldWall.Points, note.TickRange.StartTick, note.TickRange.EndTick);
                         var startRect = points[0].GetCenteredRect(SideTapSize);
@@ -604,7 +608,9 @@ namespace Yuzu.UI
                     matrix.Invert();
                     PointF pos = matrix.TransformPoint(p.Location);
                     float halfEditWidth = HalfLaneWidth + StepRadius;
-                    if (pos.X < -halfLaneWidth || pos.X > halfLaneWidth) return Observable.Empty<MouseEventArgs>();
+                    if (pos.X < -halfEditWidth || pos.X > halfEditWidth) return Observable.Empty<MouseEventArgs>();
+
+                    var surfaceLanes = Score.SurfaceLanes.Where(q => IsLaneVisible(q.Points.GetFirst().Tick, q.Points.GetLast().Tick)).Reverse().ToList();
 
                     // 既存オブジェクト操作
                     // レーン系Step移動の際は2分木の構造を崩さない範囲のTick移動しか認めない
@@ -612,7 +618,7 @@ namespace Yuzu.UI
                     {
                         case EditTarget.Field:
                         case EditTarget.Lane:
-                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            foreach (var lane in surfaceLanes)
                             {
                                 var subscription = MoveSurfaceLaneStep(lane, pos, tailTick);
                                 if (subscription != null) return subscription;
@@ -634,7 +640,7 @@ namespace Yuzu.UI
                             break;
 
                         case EditTarget.Note:
-                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            foreach (var lane in surfaceLanes)
                             {
                                 var subscription = MoveSurfaceNote(lane, pos, tailTick);
                                 if (subscription != null) return subscription;
@@ -673,7 +679,7 @@ namespace Yuzu.UI
                     {
                         case EditTarget.Field:
                         case EditTarget.Lane:
-                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            foreach (var lane in surfaceLanes)
                             {
                                 var subscription = InsertLaneStep(lane.Points, pos, tailTick, true);
                                 if (subscription != null) return subscription;
@@ -714,7 +720,7 @@ namespace Yuzu.UI
                             }
 
                         case EditTarget.Note:
-                            foreach (var lane in Score.SurfaceLanes.AsEnumerable().Reverse())
+                            foreach (var lane in surfaceLanes)
                             {
                                 var subscription = InsertSurfaceNote(lane, pos, tailTick);
                                 if (subscription != null) return subscription;
@@ -875,7 +881,7 @@ namespace Yuzu.UI
 
             IObservable<MouseEventArgs> MoveSideLaneGuide(Data.Track.FieldSide fs, PointF clicked, int tailTick)
             {
-                var lanes = fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick).ToList();
+                var lanes = fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick).ToList();
                 foreach (var lane in lanes)
                 {
                     var guidePoints = GetInterpolatedLines(fs.FieldWall.Points, lane.ValidRange.StartTick, lane.ValidRange.EndTick);
@@ -955,10 +961,10 @@ namespace Yuzu.UI
 
             IObservable<MouseEventArgs> MoveSideNote(Data.Track.FieldSide fs, PointF clicked, int tailTick)
             {
-                var lanes = fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick).ToList();
+                var lanes = fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick).ToList();
                 foreach (var lane in lanes)
                 {
-                    foreach (var note in lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick))
+                    foreach (var note in lane.Notes.EnumerateFrom(HeadTick).TakeWhile(p => p.TickRange.StartTick <= tailTick))
                     {
                         var startRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.StartTick).GetCenteredRect(SideTapSize);
                         if (startRect.Contains(clicked))
@@ -988,6 +994,7 @@ namespace Yuzu.UI
             {
                 foreach (var lane in fs.SideLanes)
                 {
+                    if (!IsLaneVisible(lane.ValidRange.StartTick, lane.ValidRange.EndTick)) continue;
                     var lines = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, lane.ValidRange.StartTick), Math.Min(tailTick, lane.ValidRange.EndTick));
                     var path = lines.ExpandLinesWidth(StepRadius * 2);
                     if (!path.IsVisible(clicked)) return null;
@@ -1050,6 +1057,7 @@ namespace Yuzu.UI
             }
             IObservable<MouseEventArgs> InsertSurfaceNote(Data.Track.SurfaceLane lane, PointF clicked, int tailTick)
             {
+                if (!IsLaneVisible(lane.Points.GetFirst().Tick, lane.Points.GetLast().Tick)) return null;
                 var lines = GetInterpolatedLines(lane.Points, Math.Max(HeadTick, lane.Points.GetFirst().Tick), Math.Min(tailTick, lane.Points.GetLast().Tick));
                 var path = lines.ExpandLinesWidth(StepRadius * 2);
                 if (!path.IsVisible(clicked)) return null;
@@ -1167,7 +1175,7 @@ namespace Yuzu.UI
             IOperation ProcessRemove(PointF clicked, int tailTick, bool shiftPressed)
             {
                 float halfEditWidth = HalfLaneWidth + StepRadius;
-                if (clicked.X < -halfLaneWidth || clicked.X > halfLaneWidth) return null;
+                if (clicked.X < -halfEditWidth || clicked.X > halfEditWidth) return null;
 
                 switch (EditTarget)
                 {
@@ -1231,6 +1239,7 @@ namespace Yuzu.UI
                 {
                     var rect = GetPositionFromFieldPoint(step).GetCenteredRect(StepRadius * 2);
                     if (!rect.Contains(clicked)) continue;
+                    if (step.Tick == 0) continue;
                     var op = new RemoveLaneStepOperation(step, fs.FieldWall.Points);
                     op.Redo();
                     return op;
@@ -1268,7 +1277,7 @@ namespace Yuzu.UI
             }
             IOperation RemoveSideLane(Data.Track.FieldSide fs, PointF clicked, int tailTick)
             {
-                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick).ToList())
+                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick).ToList())
                 {
                     var lines = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, lane.ValidRange.StartTick), Math.Min(tailTick, lane.ValidRange.EndTick));
                     var path = lines.ExpandLinesWidth(StepRadius * 2);
@@ -1282,7 +1291,7 @@ namespace Yuzu.UI
             }
             IOperation RemoveSurfaceLane(List<Data.Track.SurfaceLane> lanes, PointF clicked, int tailTick)
             {
-                foreach (var lane in lanes)
+                foreach (var lane in lanes.Where(p => IsLaneVisible(p.Points.GetFirst().Tick, p.Points.GetLast().Tick)))
                 {
                     var lines = GetInterpolatedLines(lane.Points, Math.Max(HeadTick, lane.Points.GetFirst().Tick), Math.Min(tailTick, lane.Points.GetLast().Tick));
                     var path = lines.ExpandLinesWidth(StepRadius * 2);
@@ -1295,9 +1304,9 @@ namespace Yuzu.UI
             }
             IOperation RemoveSideNote(Data.Track.FieldSide fs, PointF clicked, int tailTick)
             {
-                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= tailTick))
+                foreach (var lane in fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick))
                 {
-                    var notes = lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick).ToList();
+                    var notes = lane.Notes.EnumerateFrom(HeadTick).TakeWhile(p => p.TickRange.StartTick <= tailTick).Where(p => p.TickRange.EndTick >= HeadTick).ToList();
                     foreach (var note in notes)
                     {
                         var startRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.StartTick).GetCenteredRect(SideTapSize);
@@ -1319,7 +1328,7 @@ namespace Yuzu.UI
             }
             IOperation RemoveSurfaceNote(Data.Track.SurfaceLane lane, PointF clicked, int tailTick)
             {
-                var notes = lane.Notes.EnumerateFrom(HeadTick).TakeUntil(p => p.TickRange.StartTick <= tailTick).ToList();
+                var notes = lane.Notes.EnumerateFrom(HeadTick).TakeWhile(p => p.TickRange.StartTick <= tailTick).Where(p => p.TickRange.EndTick >= HeadTick).ToList();
                 foreach (var note in notes)
                 {
                     var startRect = GetNotePosition(lane.Points, note.TickRange.StartTick).GetCenteredRect(SurfaceTapSize);
@@ -1368,6 +1377,7 @@ namespace Yuzu.UI
                                 if (subscription != null) return subscription;
                             }
                             // サイド範囲消し
+                            if (EditTarget == EditTarget.Lane)
                             {
                                 var subscription = RemoveSideLaneRange(Score.Field.Left, pos, TailTick) ?? RemoveSideLaneRange(Score.Field.Right, pos, TailTick);
                                 if (subscription != null) return subscription;
@@ -1379,7 +1389,7 @@ namespace Yuzu.UI
 
             IObservable<MouseEventArgs> RemoveSideLaneRange(Data.Track.FieldSide fs, PointF clicked, int tailTick)
             {
-                var lanes = fs.SideLanes.EnumerateFrom(HeadTick).TakeUntil(p => p.ValidRange.StartTick <= TailTick).ToList();
+                var lanes = fs.SideLanes.EnumerateFrom(HeadTick).TakeWhile(p => p.ValidRange.StartTick <= tailTick).Where(p => p.ValidRange.EndTick >= HeadTick).ToList();
                 foreach (var lane in lanes)
                 {
                     var lines = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, lane.ValidRange.StartTick), Math.Min(TailTick, lane.ValidRange.EndTick));

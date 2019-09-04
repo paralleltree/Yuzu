@@ -14,7 +14,7 @@ namespace Yuzu.UI.Operations
 
         public bool CanUndo => UndoStack.Count > 0;
         public bool CanRedo => RedoStack.Count > 0;
-        public bool IsChanged => LastCommittedOperation == (UndoStack.Count > 0 ? UndoStack.Peek() : null);
+        public bool IsChanged => LastCommittedOperation != (UndoStack.Count > 0 ? UndoStack.Peek() : null);
 
         public event EventHandler OperationHistoryChanged;
         public event EventHandler ChangesCommitted;
