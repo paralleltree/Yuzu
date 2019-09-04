@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Yuzu.Core;
+using Yuzu.Core.Events;
 using Yuzu.Core.Track;
 using Yuzu.Properties;
 using Yuzu.UI.Operations;
@@ -110,6 +111,8 @@ namespace Yuzu.UI
         {
             var book = new ScoreBook();
             var score = book.Score;
+            score.Events.TimeSignatureChangeEvents.Add(new TimeSignatureChangeEvent() { Tick = 0, Numerator = 4, DenominatorExponent = 2 });
+            score.Events.BPMChangeEvents.Add(new BPMChangeEvent() { Tick = 0, BPM = 120 });
             score.Field.Left.FieldWall.Points.Add(new FieldPoint() { Tick = 0, LaneOffset = -score.HalfHorizontalResolution });
             score.Field.Right.FieldWall.Points.Add(new FieldPoint() { Tick = 0, LaneOffset = score.HalfHorizontalResolution });
             LoadBook(book);

@@ -6,6 +6,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -34,6 +35,8 @@ namespace Yuzu.UI
         private SurfaceLaneColor newSurfaceLaneColor;
         private HorizontalDirection flickDirection;
         private ColorProfile colorProfile;
+        private Color barLineColor = Color.FromArgb(160, 160, 160);
+        private Color beatLineColor = Color.FromArgb(80, 80, 80);
 
 
         protected Data.Score Score { get; set; }
@@ -153,6 +156,24 @@ namespace Yuzu.UI
                 Invalidate();
             }
         }
+        public Color BarLineColor
+        {
+            get { return barLineColor; }
+            set
+            {
+                barLineColor = value;
+                Invalidate();
+            }
+        }
+        public Color BeatLineColor
+        {
+            get { return beatLineColor; }
+            set
+            {
+                beatLineColor = value;
+                Invalidate();
+            }
+        }
         public SizeF SurfaceTapSize { get; set; } = new Size(20, 8);
         public SizeF SideTapSize { get; set; } = new Size(14, 26);
         public SizeF FlickSize { get; set; } = new Size(56, 8);
@@ -263,7 +284,31 @@ namespace Yuzu.UI
 
         protected int GetQuantizedTick(int tick)
         {
-            return (int)(Math.Round((double)tick / QuantizeTick) * QuantizeTick);
+            var sigs = Score.Events.TimeSignatureChangeEvents.OrderBy(p => p.Tick).ToList();
+
+            int head = 0;
+            for (int i = 0; i < sigs.Count; i++)
+            {
+                int barTick = TicksPerBeat * 4 * sigs[i].Numerator / sigs[i].Denominator;
+
+                if (i < sigs.Count - 1)
+                {
+                    int nextHead = head + (sigs[i + 1].Tick - head) / barTick * barTick;
+                    if (tick >= nextHead)
+                    {
+                        head = nextHead;
+                        continue;
+                    }
+                }
+
+                int headBarTick = head + (tick - head) / barTick * barTick;
+                int offsetCount = (int)Math.Round((float)(tick - headBarTick) / QuantizeTick);
+                int maxOffsetCount = barTick / QuantizeTick;
+                int remnantTick = barTick - maxOffsetCount * QuantizeTick;
+                return headBarTick + ((tick - headBarTick >= barTick - remnantTick / 2) ? barTick : offsetCount * QuantizeTick);
+            }
+
+            throw new InvalidOperationException();
         }
 
         protected float GetInterpolated(float first, float second, float rate)
@@ -327,6 +372,62 @@ namespace Yuzu.UI
             var dc = new DrawingContext(e.Graphics, ColorProfile);
 
             int tailTick = HeadTick + (int)(ClientSize.Height * TicksPerBeat / HeightPerBeat);
+
+            // 分割線描画
+            if (Editable)
+            {
+                using (var darkPen = new Pen(ColorProfile.BackgroundColors.DarkColor))
+                {
+                    float y1 = GetYPositionFromTick(HeadTick);
+                    float y2 = GetYPositionFromTick(tailTick);
+                    e.Graphics.DrawLine(darkPen, -HalfLaneWidth, y1, -HalfLaneWidth, y2);
+                    e.Graphics.DrawLine(darkPen, HalfLaneWidth, y1, HalfLaneWidth, y2);
+
+                    int divSize = Math.Max(HorizontalResolution / 5, 1);
+                    for (int i = 0; i * divSize < HorizontalResolution; i++)
+                    {
+                        float x = GetXPositionFromOffset(i * divSize);
+                        e.Graphics.DrawLine(darkPen, x, y1, x, y2);
+                        e.Graphics.DrawLine(darkPen, -x, y1, -x, y2);
+                    }
+                }
+            }
+
+            // 小節線描画
+            // そのイベントが含まれる小節(ただし[小節開始Tick, 小節開始Tick + 小節Tick)の範囲)からその拍子を適用
+            var sigs = Score.Events.TimeSignatureChangeEvents.OrderBy(p => p.Tick).ToList();
+
+            using (var beatPen = new Pen(BeatLineColor))
+            using (var barPen = new Pen(BarLineColor))
+            {
+                // 最初の拍子
+                int firstBarLength = TicksPerBeat * 4 * sigs[0].Numerator / sigs[0].Denominator;
+                int barTick = TicksPerBeat * 4;
+
+                for (int i = HeadTick / (barTick / sigs[0].Denominator); sigs.Count < 2 || i * barTick / sigs[0].Denominator < sigs[1].Tick / firstBarLength * firstBarLength; i++)
+                {
+                    int tick = i * barTick / sigs[0].Denominator;
+                    float y = GetYPositionFromTick(tick);
+                    e.Graphics.DrawLine(i % sigs[0].Numerator == 0 ? barPen : beatPen, -HalfLaneWidth, y, HalfLaneWidth, y);
+                    if (tick > tailTick) break;
+                }
+
+                // その後の拍子
+                int pos = 0;
+                for (int j = 1; j < sigs.Count; j++)
+                {
+                    int prevBarLength = barTick * sigs[j - 1].Numerator / sigs[j - 1].Denominator;
+                    int currentBarLength = barTick * sigs[j].Numerator / sigs[j].Denominator;
+                    pos += (sigs[j].Tick - pos) / prevBarLength * prevBarLength;
+                    if (pos > tailTick) break;
+                    for (int i = HeadTick - pos < 0 ? 0 : (HeadTick - pos) / (barTick / sigs[j].Denominator); pos + i * (barTick / sigs[j].Denominator) < tailTick; i++)
+                    {
+                        if (j < sigs.Count - 1 && i * barTick / sigs[j].Denominator >= (sigs[j + 1].Tick - pos) / currentBarLength * currentBarLength) break;
+                        float y = GetYPositionFromTick(pos + i * barTick / sigs[j].Denominator);
+                        e.Graphics.DrawLine(i % sigs[j].Numerator == 0 ? barPen : beatPen, -HalfLaneWidth, y, HalfLaneWidth, y);
+                    }
+                }
+            }
 
             // フィールド端描画
             DrawSideLane(Score.Field.Left, -HalfLaneWidth);
@@ -569,6 +670,67 @@ namespace Yuzu.UI
             }
 
             // テキスト描画
+            e.Graphics.Transform = GetDrawingMatrix(prevMatrix, false);
+            using (var font = new Font("MS Gothic", 8))
+            {
+                SizeF strSize = e.Graphics.MeasureString("000.", font);
+
+                // 小節番号描画
+                int barTick = TicksPerBeat * 4;
+                int barCount = 0;
+                int pos = 0;
+
+                for (int j = 0; j < sigs.Count; j++)
+                {
+                    if (pos > tailTick) break;
+                    int currentBarLength = barTick * sigs[j].Numerator / sigs[j].Denominator;
+                    for (int i = 0; pos + i * currentBarLength < tailTick; i++)
+                    {
+                        if (j < sigs.Count - 1 && i * currentBarLength >= (sigs[j + 1].Tick - pos) / currentBarLength * currentBarLength) break;
+
+                        int tick = pos + i * currentBarLength;
+                        barCount++;
+                        if (tick < HeadTick) continue;
+                        var point = new PointF(-HalfLaneWidth - strSize.Width, -GetYPositionFromTick(tick) - strSize.Height);
+                        e.Graphics.DrawString(string.Format("{0:000}", barCount), font, Brushes.White, point);
+                    }
+
+                    if (j < sigs.Count - 1)
+                        pos += (sigs[j + 1].Tick - pos) / currentBarLength * currentBarLength;
+                }
+
+                float rightBase = HalfLaneWidth + strSize.Width / 3;
+
+                // BPM描画
+                using (var bpmBrush = new SolidBrush(Color.FromArgb(0, 192, 0)))
+                {
+                    foreach (var item in Score.Events.BPMChangeEvents.Where(p => p.Tick >= HeadTick && p.Tick < tailTick))
+                    {
+                        var point = new PointF(rightBase, -GetYPositionFromTick(item.Tick) - strSize.Height);
+                        e.Graphics.DrawString(Regex.Replace(item.BPM.ToString(), @"\.0$", "").PadLeft(3), font, bpmBrush, point);
+                    }
+                }
+
+                // 拍子記号描画
+                using (var sigBrush = new SolidBrush(Color.FromArgb(216, 116, 0)))
+                {
+                    foreach (var item in sigs.Where(p => p.Tick >= HeadTick && p.Tick < tailTick))
+                    {
+                        var point = new PointF(rightBase + strSize.Width, -GetYPositionFromTick(item.Tick) - strSize.Height);
+                        e.Graphics.DrawString(string.Format("{0}/{1}", item.Numerator, item.Denominator), font, sigBrush, point);
+                    }
+                }
+
+                // ハイスピ描画
+                using (var highSpeedBrush = new SolidBrush(Color.FromArgb(216, 0, 64)))
+                {
+                    foreach (var item in Score.Events.HighSpeedChangeEvents.Where(p => p.Tick >= HeadTick && p.Tick < tailTick))
+                    {
+                        var point = new PointF(rightBase + strSize.Width * 2, -GetYPositionFromTick(item.Tick) - strSize.Height);
+                        e.Graphics.DrawString(string.Format("x{0: 0.00;-0.00}", item.SpeedRatio), font, highSpeedBrush, point);
+                    }
+                }
+            }
 
             e.Graphics.Transform = prevMatrix;
             PaintFinished?.Invoke(this, e);

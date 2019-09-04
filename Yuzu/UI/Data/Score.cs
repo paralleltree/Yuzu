@@ -14,6 +14,8 @@ namespace Yuzu.UI.Data
 
         public int HorizontalResolution { get; set; } = 20;
 
+        public Core.EventCollection Events { get; set; }
+
         public Field Field { get; set; }
         public List<SurfaceLane> SurfaceLanes { get; set; }
 
@@ -23,6 +25,7 @@ namespace Yuzu.UI.Data
 
         public Score()
         {
+            Events = new Core.EventCollection();
             Field = new Field();
             SurfaceLanes = new List<SurfaceLane>();
             Flicks = new List<Core.Track.Flick>();
@@ -34,6 +37,7 @@ namespace Yuzu.UI.Data
         {
             TicksPerBeat = score.TicksPerBeat;
             HorizontalResolution = score.HalfHorizontalResolution;
+            Events = score.Events;
             Field = Field.Convert(score.Field);
             SurfaceLanes = score.SurfaceLanes.Select(p => new SurfaceLane().Convert(p)).ToList();
             Flicks = score.Flicks;
@@ -48,6 +52,7 @@ namespace Yuzu.UI.Data
             {
                 TicksPerBeat = TicksPerBeat,
                 HalfHorizontalResolution = HorizontalResolution,
+                Events = Events,
                 Field = Field.ConvertBack(),
                 SurfaceLanes = SurfaceLanes.Select(p => p.ConvertBack()).ToList(),
                 Flicks = Flicks,

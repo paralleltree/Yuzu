@@ -44,6 +44,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EventCollection.cs" />
+    <Compile Include="Events\BPMChangeEvent.cs" />
+    <Compile Include="Events\EventBase.cs" />
+    <Compile Include="Events\HighSpeedChangeEvent.cs" />
+    <Compile Include="Events\TimeSignatureChangeEvent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Score.cs" />
     <Compile Include="ScoreBook.cs" />

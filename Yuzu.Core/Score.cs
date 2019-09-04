@@ -19,6 +19,8 @@ namespace Yuzu.Core
         [Newtonsoft.Json.JsonProperty]
         private int halfHorizontalResolution = 20;
         [Newtonsoft.Json.JsonProperty]
+        private EventCollection events = new EventCollection();
+        [Newtonsoft.Json.JsonProperty]
         private Field field = new Field();
         [Newtonsoft.Json.JsonProperty]
         private List<SurfaceLane> surfaceLanes = new List<SurfaceLane>();
@@ -45,6 +47,12 @@ namespace Yuzu.Core
         {
             get => halfHorizontalResolution;
             set => halfHorizontalResolution = value;
+        }
+
+        public EventCollection Events
+        {
+            get => events;
+            set => events = value;
         }
 
         public Field Field
