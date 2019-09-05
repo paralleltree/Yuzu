@@ -51,6 +51,7 @@ namespace Yuzu.UI
         {
             InitializeComponent();
             Size = new Size(420, 700);
+            Icon = Resources.MainIcon;
             ToolStripManager.RenderMode = ToolStripManagerRenderMode.System;
 
             OperationManager = new OperationManager();
@@ -290,6 +291,7 @@ namespace Yuzu.UI
             var helpMenuItems = new MenuItem[]
             {
                 new MenuItem("Wikiを開く", (s, e) => System.Diagnostics.Process.Start("https://github.com/paralleltree/Yuzu/wiki"), Shortcut.F1),
+                new MenuItem("バージョン情報", (s, e) => new VersionInfoForm().ShowDialog(this))
             };
 
             OperationManager.OperationHistoryChanged += (s, e) =>
