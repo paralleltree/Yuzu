@@ -1006,6 +1006,7 @@ namespace Yuzu.UI
                     return HandleFieldPoint(step, minTick + 1, maxTick == -1 ? -1 : maxTick - 1, true)
                         .Finally(() =>
                         {
+                            if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
                             var op = new MoveLaneStepOperation(step, beforeTick, beforeOffset, step.Tick, step.LaneOffset);
                             OperationManager.Push(op);
                         });
@@ -1038,6 +1039,7 @@ namespace Yuzu.UI
                     return HandleFieldPoint(step, minTick, maxTick, false)
                         .Finally(() =>
                         {
+                            if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
                             var op = new MoveLaneStepOperation(step, beforeTick, beforeOffset, step.Tick, step.LaneOffset);
                             OperationManager.Push(op);
                         });
@@ -1124,6 +1126,7 @@ namespace Yuzu.UI
                         return HandleSideLaneGuideRange(lane.ValidRange, minTick, maxTick, true)
                             .Finally(() =>
                             {
+                                if (beforeStart == lane.ValidRange.StartTick && beforeDuration == lane.ValidRange.Duration) return;
                                 var op = new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, lane.ValidRange.StartTick, lane.ValidRange.Duration);
                                 OperationManager.Push(op);
                             });
@@ -1134,6 +1137,7 @@ namespace Yuzu.UI
                         return HandleSideLaneGuideRange(lane.ValidRange, minTick, maxTick, false)
                             .Finally(() =>
                             {
+                                if (beforeStart == lane.ValidRange.StartTick && beforeDuration == lane.ValidRange.Duration) return;
                                 var op = new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, lane.ValidRange.StartTick, lane.ValidRange.Duration);
                                 OperationManager.Push(op);
                             });
@@ -1190,6 +1194,8 @@ namespace Yuzu.UI
                 {
                     foreach (var note in lane.Notes.EnumerateFrom(HeadTick).TakeWhile(p => p.TickRange.StartTick <= tailTick))
                     {
+                        int beforeTick = note.TickRange.StartTick;
+                        int beforeDuration = note.TickRange.Duration;
                         var startRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.StartTick).GetCenteredRect(SideTapSize);
                         if (startRect.Contains(clicked))
                         {
@@ -1199,7 +1205,13 @@ namespace Yuzu.UI
                             if (prev != null && prev != note) minTick = Math.Max(prev.TickRange.EndTick + 1, minTick);
                             var next = lane.Notes.EnumerateFrom(note.TickRange.StartTick).Skip(1).FirstOrDefault();
                             if (next != null && next != note) maxTick = Math.Min(next.TickRange.StartTick - 1, maxTick);
-                            return HandleNote(note, minTick, maxTick);
+                            return HandleNote(note, minTick, maxTick)
+                                .Finally(() =>
+                                {
+                                    if (beforeTick == note.TickRange.StartTick && beforeDuration == note.TickRange.Duration) return;
+                                    var op = new MoveNoteOperation(note, beforeTick, beforeDuration, note.TickRange.StartTick, note.TickRange.Duration);
+                                    OperationManager.Push(op);
+                                });
                         }
 
                         var endRect = GetNotePosition(fs.FieldWall.Points, note.TickRange.EndTick).GetCenteredRect(SurfaceTapSize);
@@ -1208,7 +1220,13 @@ namespace Yuzu.UI
                             int maxDuration = lane.ValidRange.EndTick - note.TickRange.StartTick;
                             var next = lane.Notes.EnumerateFrom(note.TickRange.StartTick).Skip(1).FirstOrDefault();
                             if (next != null && next != note) maxDuration = Math.Min(next.TickRange.StartTick - note.TickRange.StartTick - 1, maxDuration);
-                            return HandleHoldEnd(note, maxDuration);
+                            return HandleHoldEnd(note, maxDuration)
+                                .Finally(() =>
+                                {
+                                    if (beforeTick == note.TickRange.StartTick && beforeDuration == note.TickRange.Duration) return;
+                                    var op = new MoveNoteOperation(note, beforeTick, beforeDuration, note.TickRange.StartTick, note.TickRange.Duration);
+                                    OperationManager.Push(op);
+                                });
                         }
                     }
                 }
@@ -1258,6 +1276,7 @@ namespace Yuzu.UI
                         return HandleNote(note, minTick, maxTick)
                             .Finally(() =>
                             {
+                                if (startTick == note.TickRange.StartTick && duration == note.TickRange.Duration) return;
                                 var op = new MoveNoteOperation(note, startTick, duration, note.TickRange.StartTick, note.TickRange.Duration);
                                 OperationManager.Push(op);
                             });
@@ -1272,6 +1291,7 @@ namespace Yuzu.UI
                         return HandleHoldEnd(note, maxDuration)
                             .Finally(() =>
                             {
+                                if (startTick == note.TickRange.StartTick && duration == note.TickRange.Duration) return;
                                 var op = new MoveNoteOperation(note, startTick, duration, note.TickRange.StartTick, note.TickRange.Duration);
                                 OperationManager.Push(op);
                             });
@@ -1350,6 +1370,7 @@ namespace Yuzu.UI
                 return HandleFieldObject(flick)
                     .Finally(() =>
                     {
+                        if (tick == flick.Position.Tick && offset == flick.Position.LaneOffset) return;
                         var op = new MoveFieldObjectOperation(flick, tick, offset, flick.Position.Tick, flick.Position.LaneOffset);
                         OperationManager.Push(op);
                     });
@@ -1363,6 +1384,7 @@ namespace Yuzu.UI
                 return HandleFieldObject(obj)
                     .Finally(() =>
                     {
+                        if (tick == obj.Position.Tick && offset == obj.Position.LaneOffset) return;
                         var op = new MoveFieldObjectOperation(obj, tick, offset, obj.Position.Tick, obj.Position.LaneOffset);
                         OperationManager.Push(op);
                     });
