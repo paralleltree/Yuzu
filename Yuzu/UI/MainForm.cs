@@ -251,12 +251,24 @@ namespace Yuzu.UI
 
         private MainMenu CreateMainMenu()
         {
+            var bookPropertiesItem = new MenuItem("譜面プロパティ(&P)", (s, e) =>
+            {
+                var form = new BookPropertiesForm(ScoreBook);
+                if (form.ShowDialog(this) != DialogResult.OK) return;
+
+                ScoreBook.Title = form.Title;
+                ScoreBook.ArtistName = form.ArtistName;
+                ScoreBook.NotesDesignerName = form.NotesDesignerName;
+            });
+
             var fileMenuItems = new MenuItem[]
             {
                 new MenuItem("新規作成(&N)", (s, e) => Clear()) { Shortcut = Shortcut.CtrlN },
                 new MenuItem("開く(&O)", (s, e) => OpenFile()) { Shortcut = Shortcut.CtrlO },
                 new MenuItem("保存(&S)", (s, e) => SaveFile()) { Shortcut = Shortcut.CtrlS },
                 new MenuItem("名前をつけて保存(&A)", (s, e) => SaveAs()) { Shortcut = Shortcut.CtrlShiftS },
+                new MenuItem("-"),
+                bookPropertiesItem,
                 new MenuItem("-"),
                 new MenuItem("終了(&X)", (s, e) => Close())
             };
