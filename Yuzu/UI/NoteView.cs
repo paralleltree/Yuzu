@@ -1148,9 +1148,9 @@ namespace Yuzu.UI
                     int minTick = 0;
                     int maxTick = -1;
                     var prev = fs.SideLanes.EnumerateFrom(lane.ValidRange.StartTick - 1).FirstOrDefault();
-                    if (prev != null && prev != lane) minTick = prev.ValidRange.EndTick + 1;
+                    if (prev != null && prev != lane) minTick = prev.ValidRange.EndTick;
                     var next = fs.SideLanes.EnumerateFrom(lane.ValidRange.StartTick).Skip(1).FirstOrDefault();
-                    if (next != null && next != lane) maxTick = next.ValidRange.StartTick - 1;
+                    if (next != null && next != lane) maxTick = next.ValidRange.StartTick;
 
                     int beforeStart = lane.ValidRange.StartTick;
                     int beforeDuration = lane.ValidRange.Duration;
@@ -1161,8 +1161,18 @@ namespace Yuzu.UI
                             .Finally(() =>
                             {
                                 if (beforeStart == lane.ValidRange.StartTick && beforeDuration == lane.ValidRange.Duration) return;
-                                var op = new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, lane.ValidRange.StartTick, lane.ValidRange.Duration);
-                                OperationManager.Push(op);
+                                IOperation op = new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, lane.ValidRange.StartTick, lane.ValidRange.Duration);
+                                if (minTick > 0 && lane.ValidRange.StartTick == minTick)
+                                {
+                                    // 前のガイドラインとマージ
+                                    var ops = new IOperation[]
+                                    {
+                                        new RemoveSideLaneOperation(prev, fs.SideLanes),
+                                        new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, prev.ValidRange.StartTick, lane.ValidRange.EndTick - prev.ValidRange.StartTick),
+                                    }.Concat(prev.Notes.Select(p => new InsertNoteOperation(p, lane.Notes)));
+                                    op = new CompositeOperation(op.Description, ops.ToArray());
+                                }
+                                OperationManager.ExecuteAndPush(op);
                             });
                     }
                     if (guidePoints[guidePoints.Length - 1].GetCenteredRect(StepRadius * 2).Contains(clicked))
@@ -1172,8 +1182,18 @@ namespace Yuzu.UI
                             .Finally(() =>
                             {
                                 if (beforeStart == lane.ValidRange.StartTick && beforeDuration == lane.ValidRange.Duration) return;
-                                var op = new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, lane.ValidRange.StartTick, lane.ValidRange.Duration);
-                                OperationManager.Push(op);
+                                IOperation op = new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, lane.ValidRange.StartTick, lane.ValidRange.Duration);
+                                if (maxTick != -1 && lane.ValidRange.EndTick == maxTick)
+                                {
+                                    // 後のガイドラインとマージ
+                                    var ops = new IOperation[]
+                                    {
+                                        new RemoveSideLaneOperation(next, fs.SideLanes),
+                                        new ChangeSideLaneGuideRangeOperation(lane, beforeStart, beforeDuration, beforeStart, next.ValidRange.EndTick - beforeStart)
+                                    }.Concat(next.Notes.Select(p => new InsertNoteOperation(p, lane.Notes)));
+                                    op = new CompositeOperation(op.Description, ops.ToArray());
+                                }
+                                OperationManager.ExecuteAndPush(op);
                             });
                     }
                 }
