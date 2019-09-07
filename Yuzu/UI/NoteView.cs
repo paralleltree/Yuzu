@@ -1040,8 +1040,42 @@ namespace Yuzu.UI
                         .Finally(() =>
                         {
                             if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
-                            var op = new MoveLaneStepOperation(step, beforeTick, beforeOffset, step.Tick, step.LaneOffset);
-                            OperationManager.Push(op);
+                            IOperation op = new MoveLaneStepOperation(step, beforeTick, beforeOffset, step.Tick, step.LaneOffset);
+                            if (step == lane.Points.GetFirst())
+                            {
+                                // 終了位置が同じ他のレーンとマージ
+                                var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetLast())).ToList();
+                                if (mergeables.Count == 1)
+                                {
+                                    var mergeable = mergeables.Single();
+                                    var ops = new IOperation[]
+                                    {
+                                        new RemoveSurfaceLaneOperation(mergeable, Score.SurfaceLanes),
+                                        op
+                                    }
+                                    .Concat(mergeable.Points.Take(mergeable.Points.Count - 1).Select(p => new InsertLaneStepOperation(p, lane.Points)))
+                                    .Concat(mergeable.Notes.Select(p => new InsertNoteOperation(p, lane.Notes)));
+                                    op = new CompositeOperation(op.Description, ops.ToArray());
+                                }
+                            }
+                            if (step == lane.Points.GetLast())
+                            {
+                                // 開始位置が同じ他のレーンとマージ
+                                var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetFirst())).ToList();
+                                if (mergeables.Count == 1)
+                                {
+                                    var mergeable = mergeables.Single();
+                                    var ops = new IOperation[]
+                                    {
+                                        new RemoveSurfaceLaneOperation(mergeable, Score.SurfaceLanes),
+                                        op
+                                    }
+                                    .Concat(mergeable.Points.Skip(1).Select(p => new InsertLaneStepOperation(p, lane.Points)))
+                                    .Concat(mergeable.Notes.Select(p => new InsertNoteOperation(p, lane.Notes)));
+                                    op = new CompositeOperation(op.Description, ops.ToArray());
+                                }
+                            }
+                            OperationManager.ExecuteAndPush(op);
                         });
                 }
                 return null;
