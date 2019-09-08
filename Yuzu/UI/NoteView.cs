@@ -1045,7 +1045,8 @@ namespace Yuzu.UI
                             {
                                 // 終了位置が同じ他のレーンとマージ
                                 var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetLast())).ToList();
-                                if (mergeables.Count == 1)
+                                // 対象が1つだけかつマージするレーンでノートが重複していない場合のみ
+                                if (mergeables.Count == 1 && mergeables.Single().Notes.GetLast().TickRange.EndTick < lane.Notes.GetFirst().TickRange.StartTick)
                                 {
                                     var mergeable = mergeables.Single();
                                     var ops = new IOperation[]
@@ -1062,7 +1063,8 @@ namespace Yuzu.UI
                             {
                                 // 開始位置が同じ他のレーンとマージ
                                 var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetFirst())).ToList();
-                                if (mergeables.Count == 1)
+                                // 対象が1つだけかつマージするレーンでノートが重複していない場合のみ
+                                if (mergeables.Count == 1 && lane.Notes.GetLast().TickRange.EndTick < mergeables.Single().Notes.GetFirst().TickRange.StartTick)
                                 {
                                     var mergeable = mergeables.Single();
                                     var ops = new IOperation[]
