@@ -26,6 +26,12 @@ namespace Yuzu.UI.Operations
             OperationHistoryChanged?.Invoke(this, EventArgs.Empty);
         }
 
+        public void ExecuteAndPush(IOperation op)
+        {
+            op.Redo();
+            Push(op);
+        }
+
         public void Undo()
         {
             IOperation op = UndoStack.Pop();

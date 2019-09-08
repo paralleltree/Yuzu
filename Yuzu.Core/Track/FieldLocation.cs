@@ -27,6 +27,10 @@ namespace Yuzu.Core.Track
             get => laneOffset;
             set => laneOffset = value;
         }
+
+        public override bool Equals(object obj) => obj is FieldPoint other && Tick == other.Tick && LaneOffset == other.LaneOffset;
+
+        public override int GetHashCode() => Tick ^ LaneOffset;
     }
 
     /// <summary>
@@ -51,5 +55,9 @@ namespace Yuzu.Core.Track
             set => duration = value;
         }
         public int EndTick => StartTick + Duration;
+
+        public override bool Equals(object obj) => obj is TickRange other && StartTick == other.StartTick && Duration == other.Duration;
+
+        public override int GetHashCode() => StartTick ^ EndTick;
     }
 }
