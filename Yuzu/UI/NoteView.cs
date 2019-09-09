@@ -928,7 +928,7 @@ namespace Yuzu.UI
                                 var start = new FieldPoint()
                                 {
                                     Tick = GetQuantizedTick(GetTickFromYPosition(pos.Y)),
-                                    LaneOffset = GetOffsetFromXPosition(pos.X)
+                                    LaneOffset = Math.Max(Math.Min(GetOffsetFromXPosition(pos.X), HorizontalResolution), -HorizontalResolution)
                                 };
                                 var end = new FieldPoint()
                                 {
@@ -983,7 +983,7 @@ namespace Yuzu.UI
                             obj.Position = new FieldPoint()
                             {
                                 Tick = GetQuantizedTick(GetTickFromYPosition(pos.Y)),
-                                LaneOffset = GetOffsetFromXPosition(pos.X)
+                                LaneOffset = Math.Max(Math.Min(GetOffsetFromXPosition(pos.X), HorizontalResolution), -HorizontalResolution)
                             };
                             op.Redo();
                             Invalidate();
@@ -1090,7 +1090,7 @@ namespace Yuzu.UI
                 var point = new FieldPoint()
                 {
                     Tick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
-                    LaneOffset = GetOffsetFromXPosition(clicked.X)
+                    LaneOffset = Math.Max(Math.Min(GetOffsetFromXPosition(clicked.X), HorizontalResolution), -HorizontalResolution)
                 };
                 (int minTick, int maxTick) = GetAroundPointTick(points, point, false);
                 if (maxTick == -1 && limitEdge) maxTick = points.GetLast().Tick;
