@@ -1295,7 +1295,7 @@ namespace Yuzu.UI
                     if (!IsLaneVisible(lane.ValidRange.StartTick, lane.ValidRange.EndTick)) continue;
                     var lines = GetInterpolatedLines(fs.FieldWall.Points, Math.Max(HeadTick, lane.ValidRange.StartTick), Math.Min(tailTick, lane.ValidRange.EndTick));
                     var path = lines.ExpandLinesWidth(StepRadius * 2);
-                    if (!path.IsVisible(clicked)) return null;
+                    if (!path.IsVisible(clicked)) continue;
                     var range = new TickRange()
                     {
                         StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
