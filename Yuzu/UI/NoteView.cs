@@ -590,7 +590,7 @@ namespace Yuzu.UI
 
             // RGB
             var surfaceLanes = Score.SurfaceLanes.Where(p => IsLaneVisible(p.Points.GetFirst().Tick, p.Points.GetLast().Tick)).ToList();
-            foreach (var lane in surfaceLanes)
+            foreach (var lane in surfaceLanes.Where(p => p.Points.Count > 1))
             {
                 DrawSurfaceGuideLine(lane);
             }
@@ -955,7 +955,20 @@ namespace Yuzu.UI
                                 subscription = InsertSideNote(Score.Field.Right, pos, tailTick);
                                 if (subscription != null) return subscription;
                             }
-                            break;
+                            // Duration = 0のレーン上に存在するノート追加
+                            if (NewNoteType != NewNoteType.Tap) break;
+                            var newLane = new Data.Track.SurfaceLane() { LaneColor = NewSurfaceLaneColor };
+                            var point = new FieldPoint()
+                            {
+                                Tick = GetQuantizedTick(GetTickFromYPosition(pos.Y)),
+                                LaneOffset = Math.Max(Math.Min(GetOffsetFromXPosition(pos.X), HorizontalResolution), -HorizontalResolution)
+                            };
+                            newLane.Points.Add(point);
+                            newLane.Notes.Add(new Note() { TickRange = new TickRange() { StartTick = point.Tick, Duration = 0 } });
+                            Score.SurfaceLanes.Add(newLane);
+                            Invalidate();
+                            return HandleNoteWithSinglePointLane(newLane)
+                                .Finally(() => OperationManager.Push(new AddSurfaceLaneOperation(newLane, Score.SurfaceLanes)));
 
                         default:
                             FieldObject obj = null;
@@ -1323,6 +1336,22 @@ namespace Yuzu.UI
                     var startRect = GetNotePosition(lane.Points, note.TickRange.StartTick).GetCenteredRect(SurfaceTapSize);
                     if (startRect.Contains(clicked))
                     {
+                        if (lane.Points.Count == 1)
+                        {
+                            var point = lane.Points.Single();
+                            int beforeOffset = point.LaneOffset;
+                            return HandleNoteWithSinglePointLane(lane)
+                                .Finally(() =>
+                                {
+                                    if (startTick == point.Tick && beforeOffset == point.LaneOffset) return;
+                                    var ops = new IOperation[]
+                                    {
+                                        new MoveLaneStepOperation(point, startTick, beforeOffset, point.Tick, point.LaneOffset),
+                                        new MoveNoteOperation(note, startTick, note.TickRange.Duration, point.Tick, note.TickRange.Duration)
+                                    };
+                                    OperationManager.Push(new CompositeOperation(ops[1].Description, ops));
+                                });
+                        }
                         int minTick = lane.Points.GetFirst().Tick;
                         int maxTick = lane.Points.GetLast().Tick;
                         var prev = lane.Notes.EnumerateFrom(note.TickRange.StartTick - 1).FirstOrDefault();
@@ -1397,6 +1426,22 @@ namespace Yuzu.UI
                     int duration = tick - note.TickRange.StartTick;
                     if (duration <= 0 || duration > maxDuration) return;
                     note.TickRange.Duration = duration;
+                });
+            }
+            IObservable<MouseEventArgs> HandleNoteWithSinglePointLane(Data.Track.SurfaceLane lane)
+            {
+                if (lane.Points.Count != 1) throw new ArgumentException("The lane does not have single point.");
+                return mouseMove.TakeUntil(mouseUp).Do(p =>
+                {
+                    var matrix = GetDrawingMatrix(new Matrix(), true).GetInvertedMatrix();
+                    var pos = matrix.TransformPoint(p.Location);
+                    int tick = GetQuantizedTick(GetTickFromYPosition(pos.Y));
+                    int offset = Math.Max(Math.Min(GetOffsetFromXPosition(pos.X), HorizontalResolution), -HorizontalResolution);
+                    var point = lane.Points.Single();
+                    var note = lane.Notes.Single();
+                    point.Tick = tick;
+                    point.LaneOffset = offset;
+                    note.TickRange.StartTick = tick;
                 });
             }
             (int, int) GetAroundNoteTick(AVLTree<Note> notes, int tick)
@@ -1642,7 +1687,7 @@ namespace Yuzu.UI
                         if (!endRect.Contains(clicked) && !path.IsVisible(clicked)) continue;
                     }
 
-                    var op = new RemoveNoteOperation(note, lane.Notes);
+                    var op = lane.Points.Count > 1 ? (IOperation)new RemoveNoteOperation(note, lane.Notes) : new RemoveSurfaceLaneOperation(lane, Score.SurfaceLanes);
                     op.Redo();
                     Invalidate();
                     return op;
