@@ -61,6 +61,7 @@
     <Compile Include="Track\Note.cs" />
     <Compile Include="Track\SideLane.cs" />
     <Compile Include="Track\SurfaceLane.cs" />
+    <Compile Include="UI\SelectionRange.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

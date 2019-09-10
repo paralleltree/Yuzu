@@ -351,6 +351,10 @@ namespace Yuzu.UI
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image
             };
+            var selectionButton = new ToolStripButton("選択", Resources.SelectionIcon, (s, e) => noteView.EditMode = EditMode.Select)
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image
+            };
             var eraserButton = new ToolStripButton("消しゴム", Resources.EraserIcon, (s, e) => noteView.EditMode = EditMode.Erase)
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image
@@ -365,6 +369,7 @@ namespace Yuzu.UI
             noteView.EditModeChanged += (s, e) =>
             {
                 penButton.Checked = noteView.EditMode == EditMode.Edit;
+                selectionButton.Checked = noteView.EditMode == EditMode.Select;
                 eraserButton.Checked = noteView.EditMode == EditMode.Erase;
             };
 
@@ -372,7 +377,7 @@ namespace Yuzu.UI
             {
                 newFileButton, openFileButton, saveFileButton, new ToolStripSeparator(),
                 undoButton, redoButton, new ToolStripSeparator(),
-                penButton, eraserButton
+                penButton, selectionButton, eraserButton
             });
         }
 

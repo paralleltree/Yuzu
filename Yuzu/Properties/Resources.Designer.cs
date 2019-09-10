@@ -213,6 +213,16 @@ namespace Yuzu.Properties
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap SelectionIcon {
+            get {
+                object obj = ResourceManager.GetObject("SelectionIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap TapIcon {
             get {
                 object obj = ResourceManager.GetObject("TapIcon", resourceCulture);
