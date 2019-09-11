@@ -177,6 +177,10 @@
       <Project>{e8d1bf85-f525-45e9-ab57-aa37b4740550}</Project>
       <Name>Yuzu.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Yuzu.Plugins\Yuzu.Plugins.csproj">
+      <Project>{134e91e4-19ae-43a3-9e65-c6549db32faa}</Project>
+      <Name>Yuzu.Plugins</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\tap.png" />
