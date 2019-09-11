@@ -284,9 +284,31 @@ namespace Yuzu.UI
                 Enabled = false
             };
 
+            var removeEventsItem = new MenuItem("選択範囲内イベントを削除", (s, e) =>
+            {
+                int head = NoteView.SelectedRange.StartTick + (NoteView.SelectedRange.Duration < 0 ? NoteView.SelectedRange.Duration : 0);
+                int tail = NoteView.SelectedRange.StartTick + (NoteView.SelectedRange.Duration < 0 ? 0 : NoteView.SelectedRange.Duration);
+                IEnumerable<IOperation> RemoveFilter<T>(List<T> list) where T : EventBase
+                {
+                    return list.Where(p => p.Tick != 0 && p.Tick >= head && p.Tick <= tail).Select(p => new RemoveEventOperation<T>(p, list));
+                }
+
+                var events = NoteView.Score.Events;
+                var ops = new[]
+                {
+                    RemoveFilter(events.BPMChangeEvents),
+                    RemoveFilter(events.TimeSignatureChangeEvents),
+                    RemoveFilter(events.HighSpeedChangeEvents)
+                }.SelectMany(p => p);
+
+                OperationManager.ExecuteAndPush(new CompositeOperation("イベント削除", ops.ToArray()));
+            });
+
             var editMenuItems = new MenuItem[]
             {
-                undoItem, redoItem
+                undoItem, redoItem,
+                new MenuItem("-"),
+                removeEventsItem
             };
 
             var previewItem = new MenuItem("譜面プレビュー", (s, e) =>
@@ -298,6 +320,72 @@ namespace Yuzu.UI
             var viewMenuItems = new MenuItem[]
             {
                 previewItem
+            };
+
+            var addBpmItem = new MenuItem("BPM", (s, e) =>
+            {
+                var form = new BPMSelectionForm()
+                {
+                    BPM = NoteView.Score.Events.BPMChangeEvents.OrderBy(p => p.Tick).LastOrDefault(p => p.Tick <= NoteView.CurrentTick)?.BPM ?? 120m
+                };
+                if (form.ShowDialog(this) != DialogResult.OK) return;
+
+                var item = new BPMChangeEvent()
+                {
+                    Tick = NoteView.CurrentTick,
+                    BPM = form.BPM
+                };
+
+                IOperation op = ProcessAddEvent(item, NoteView.Score.Events.BPMChangeEvents);
+                OperationManager.ExecuteAndPush(op);
+                NoteView.Invalidate();
+            });
+
+            var addTimeSignatureItem = new MenuItem("拍子", (s, e) =>
+            {
+                var form = new TimesignatureSelectionForm();
+                if (form.ShowDialog(this) != DialogResult.OK) return;
+
+                var item = new TimeSignatureChangeEvent()
+                {
+                    Tick = NoteView.CurrentTick,
+                    Numerator = form.Numerator,
+                    DenominatorExponent = form.DenominatorExponent
+                };
+
+                IOperation op = ProcessAddEvent(item, NoteView.Score.Events.TimeSignatureChangeEvents);
+                OperationManager.ExecuteAndPush(op);
+                NoteView.Invalidate();
+            });
+
+            var addHighSpeedItem = new MenuItem("ハイスピード", (s, e) =>
+            {
+                var form = new HighSpeedSelectionForm();
+                if (form.ShowDialog(this) != DialogResult.OK) return;
+
+                var item = new HighSpeedChangeEvent()
+                {
+                    Tick = NoteView.CurrentTick,
+                    SpeedRatio = form.SpeedRatio
+                };
+
+                IOperation op = ProcessAddEvent(item, NoteView.Score.Events.HighSpeedChangeEvents);
+                OperationManager.ExecuteAndPush(op);
+                NoteView.Invalidate();
+            });
+
+            IOperation ProcessAddEvent<T>(T item, List<T> list) where T : EventBase
+            {
+                var prev = list.SingleOrDefault(p => p.Tick == item.Tick);
+                var addOp = new AddEventOperation<T>(item, list);
+                if (prev == null) return addOp;
+                var removeOp = new RemoveEventOperation<T>(prev, list);
+                return new CompositeOperation(addOp.Description, new IOperation[] { removeOp, addOp });
+            }
+
+            var insertMenuItems = new MenuItem[]
+            {
+                addBpmItem, addTimeSignatureItem, addHighSpeedItem
             };
 
             var helpMenuItems = new MenuItem[]
@@ -317,6 +405,7 @@ namespace Yuzu.UI
                 new MenuItem("ファイル(&F)", fileMenuItems),
                 new MenuItem("編集(&E)", editMenuItems),
                 new MenuItem("表示(&V)", viewMenuItems),
+                new MenuItem("挿入(&I)", insertMenuItems),
                 new MenuItem("ヘルプ(&H)", helpMenuItems)
             });
         }

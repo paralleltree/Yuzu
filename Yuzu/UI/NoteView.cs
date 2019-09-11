@@ -47,7 +47,7 @@ namespace Yuzu.UI
         private SizeF flickSize = new Size(56, 8);
         private float circularObjectSize = 11;
 
-        protected Data.Score Score { get; set; }
+        public Data.Score Score { get; protected set; }
         public int TicksPerBeat
         {
             get { return ticksPerBeat; }
