@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using Yuzu.Core;
 using Yuzu.Core.Events;
 using Yuzu.Core.Track;
+using Yuzu.Plugins;
 using Yuzu.Properties;
 using Yuzu.UI.Operations;
 using Yuzu.UI.Forms;
@@ -30,6 +31,8 @@ namespace Yuzu.UI
         private OperationManager OperationManager { get; }
         private NoteView NoteView { get; }
         private ScrollBar NoteViewScrollBar { get; }
+
+        private PluginManager PluginManager { get; } = PluginManager.GetInstance();
 
         private bool IsPreviewMode
         {
@@ -115,6 +118,12 @@ namespace Yuzu.UI
             NoteView.EditTarget = EditTarget.Field;
 
             LoadEmptyBook();
+
+            if (PluginManager.FailedFiles.Count > 0)
+            {
+                string message = "以下のプラグインの読み込みに失敗しました。DLLファイルがブロックされているか無効なファイルである可能性があります。";
+                MessageBox.Show(this, string.Join("\n", new[] { message }.Concat(PluginManager.FailedFiles)), Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
