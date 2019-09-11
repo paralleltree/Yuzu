@@ -39,5 +39,10 @@ namespace Yuzu.UI
         {
             return bar.Maximum - bar.LargeChange + 1;
         }
+
+        public static void SelectAll(this NumericUpDown control)
+        {
+            control.Select(0, control.Text.Length);
+        }
     }
 }
