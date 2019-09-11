@@ -27,6 +27,8 @@ namespace Yuzu.UI
         private int horizontalResolution = 20;
         private float halfLaneWidth = 120;
 
+        private int currentTick;
+        private SelectionRange selectedRange;
         private int headTick;
         private bool editable = true;
         private EditMode editMode;
@@ -45,7 +47,7 @@ namespace Yuzu.UI
         private SizeF flickSize = new Size(56, 8);
         private float circularObjectSize = 11;
 
-        protected Data.Score Score { get; set; }
+        public Data.Score Score { get; protected set; }
         public int TicksPerBeat
         {
             get { return ticksPerBeat; }
@@ -84,6 +86,26 @@ namespace Yuzu.UI
         }
         public float LaneWidth => HalfLaneWidth * 2;
 
+        public int CurrentTick
+        {
+            get { return currentTick; }
+            set
+            {
+                currentTick = value;
+                Invalidate();
+                CurrentTickChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        public SelectionRange SelectedRange
+        {
+            get { return selectedRange; }
+            set
+            {
+                selectedRange = value;
+                Invalidate();
+                SelectedRangeChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
         public int HeadTick
         {
             get { return headTick; }
@@ -253,6 +275,8 @@ namespace Yuzu.UI
 
         public event EventHandler DragScroll;
         protected event PaintEventHandler PaintFinished;
+        public event EventHandler CurrentTickChanged;
+        public event EventHandler SelectedRangeChanged;
         public event EventHandler HeadTickChanged;
         public event EventHandler EditModeChanged;
         public event EventHandler EditTargetChanged;
@@ -312,6 +336,8 @@ namespace Yuzu.UI
 
         public void Load(Core.Score score)
         {
+            CurrentTick = 0;
+            SelectedRange = new SelectionRange();
             Score = new Data.Score().Convert(score);
             TicksPerBeat = Score.TicksPerBeat;
             HorizontalResolution = Score.HorizontalResolution;
@@ -406,6 +432,15 @@ namespace Yuzu.UI
         }
         bool IsLaneVisible(int startTick, int endTick) => startTick <= TailTick && endTick >= HeadTick;
 
+        protected Rectangle GetSelectedRect()
+        {
+            int head = SelectedRange.Duration < 0 ? SelectedRange.StartTick + SelectedRange.Duration : SelectedRange.StartTick;
+            int tail = SelectedRange.Duration < 0 ? SelectedRange.StartTick : SelectedRange.StartTick + SelectedRange.Duration;
+            float xpad = SelectedRange.SelectedLanesCount > 0 ? HalfLaneWidth / HorizontalResolution / 2 : 0;
+            var start = new Point((int)(GetXPositionFromOffset(SelectedRange.StartLaneIndex) - xpad), (int)(GetYPositionFromTick(head) - SurfaceTapSize.Height));
+            var end = new Point((int)(GetXPositionFromOffset(SelectedRange.StartLaneIndex + SelectedRange.SelectedLanesCount) - xpad), (int)(GetYPositionFromTick(tail) + SurfaceTapSize.Height));
+            return new Rectangle(start.X, start.Y, end.X - start.X, end.Y - start.Y);
+        }
 
         protected Matrix GetDrawingMatrix(Matrix baseMatrix, bool flipY)
         {
@@ -489,6 +524,12 @@ namespace Yuzu.UI
                         e.Graphics.DrawLine(i % sigs[j].Numerator == 0 ? barPen : beatPen, -HalfLaneWidth, y, HalfLaneWidth, y);
                     }
                 }
+            }
+
+            using (var posPen = new Pen(Color.FromArgb(196, 0, 0)))
+            {
+                float y = GetYPositionFromTick(CurrentTick);
+                e.Graphics.DrawLine(posPen, -HalfLaneWidth * 1.2f, y, HalfLaneWidth, y);
             }
 
             // フィールド端描画
@@ -731,6 +772,12 @@ namespace Yuzu.UI
                 dc.Graphics.SmoothingMode = SmoothingMode.Default;
             }
 
+            if (Editable)
+            {
+                Rectangle rect = GetSelectedRect();
+                e.Graphics.DrawXorRectangle(PenStyles.Dot, e.Graphics.Transform.TransformPoint(rect.Location), e.Graphics.Transform.TransformPoint(rect.Location + rect.Size));
+            }
+
             // テキスト描画
             e.Graphics.Transform = GetDrawingMatrix(prevMatrix, false);
             using (var font = new Font("MS Gothic", 8))
@@ -822,6 +869,42 @@ namespace Yuzu.UI
                         DragScroll?.Invoke(this, EventArgs.Empty);
                     }
                 })).Subscribe();
+
+            var selectSubscription = mouseDown
+                .Where(p => Editable && p.Button == MouseButtons.Left && EditMode == EditMode.Select)
+                .SelectMany(p =>
+                {
+                    Matrix matrix = GetDrawingMatrix(new Matrix(), true).GetInvertedMatrix();
+                    PointF pos = matrix.TransformPoint(p.Location);
+                    CurrentTick = Math.Max(GetQuantizedTick(GetTickFromYPosition(pos.Y)), 0);
+                    return SelectRange(pos);
+                }).Subscribe(p => Invalidate());
+
+            IObservable<MouseEventArgs> SelectRange(PointF start)
+            {
+                SelectedRange = new SelectionRange()
+                {
+                    StartTick = Math.Max(GetQuantizedTick(GetTickFromYPosition(start.Y)), 0),
+                    Duration = 0,
+                    StartLaneIndex = 0,
+                    SelectedLanesCount = 0
+                };
+                return mouseMove.TakeUntil(mouseUp).Do(q =>
+                {
+                    Matrix matrix = GetDrawingMatrix(new Matrix(), true).GetInvertedMatrix();
+                    PointF pos = matrix.TransformPoint(q.Location);
+                    int startLaneIndex = Math.Min(Math.Max(GetOffsetFromXPosition(start.X), -HorizontalResolution), HorizontalResolution);
+                    int endLaneIndex = Math.Min(Math.Max(GetOffsetFromXPosition(pos.X), -HorizontalResolution), HorizontalResolution);
+                    int endTick = GetQuantizedTick(GetTickFromYPosition(pos.Y));
+                    SelectedRange = new SelectionRange()
+                    {
+                        StartTick = SelectedRange.StartTick,
+                        Duration = endTick - SelectedRange.StartTick,
+                        StartLaneIndex = Math.Min(startLaneIndex, endLaneIndex),
+                        SelectedLanesCount = Math.Abs(endLaneIndex - startLaneIndex) + 1
+                    };
+                });
+            }
 
             var editSubscription = mouseDown
                 .Where(p => Editable && p.Button == MouseButtons.Left && EditMode == EditMode.Edit)
@@ -1916,6 +1999,7 @@ namespace Yuzu.UI
                 return Observable.FromEvent<PaintEventHandler, PaintEventArgs>(h => (o, e) => h(e), h => this.PaintFinished += h, h => this.PaintFinished -= h);
             }
 
+            CompositeDisposable.Add(selectSubscription);
             CompositeDisposable.Add(editSubscription);
             CompositeDisposable.Add(eraseSubscription);
             CompositeDisposable.Add(eraseDragSubscription);

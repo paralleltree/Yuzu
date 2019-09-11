@@ -11,6 +11,13 @@ namespace Yuzu.UI
 {
     internal static class PlaneExtensions
     {
+        public static Point TransformPoint(this Matrix matrix, Point point)
+        {
+            var arr = new[] { point };
+            matrix.TransformPoints(arr);
+            return arr[0];
+        }
+
         public static PointF TransformPoint(this Matrix matrix, PointF point)
         {
             var arr = new[] { point };

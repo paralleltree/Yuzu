@@ -85,8 +85,26 @@
     <Compile Include="UI\Forms\BookPropertiesForm.Designer.cs">
       <DependentUpon>BookPropertiesForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Forms\BPMSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\BPMSelectionForm.Designer.cs">
+      <DependentUpon>BPMSelectionForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Forms\CheckableToolStripSplitButton.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\HighSpeedSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\HighSpeedSelectionForm.Designer.cs">
+      <DependentUpon>HighSpeedSelectionForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\TimesignatureSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\TimesignatureSelectionForm.Designer.cs">
+      <DependentUpon>TimesignatureSelectionForm.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\Forms\VersionInfoForm.cs">
       <SubType>Form</SubType>
@@ -109,6 +127,7 @@
       <DependentUpon>NoteView.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\Operations\CompositeOperation.cs" />
+    <Compile Include="UI\Operations\EventOperations.cs" />
     <Compile Include="UI\Operations\FieldObjectOperations.cs" />
     <Compile Include="UI\Operations\IOperation.cs" />
     <Compile Include="UI\Operations\NoteOperations.cs" />
@@ -126,6 +145,15 @@
     </Compile>
     <EmbeddedResource Include="UI\Forms\BookPropertiesForm.resx">
       <DependentUpon>BookPropertiesForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\BPMSelectionForm.resx">
+      <DependentUpon>BPMSelectionForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\HighSpeedSelectionForm.resx">
+      <DependentUpon>HighSpeedSelectionForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\TimesignatureSelectionForm.resx">
+      <DependentUpon>TimesignatureSelectionForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\VersionInfoForm.resx">
       <DependentUpon>VersionInfoForm.cs</DependentUpon>
@@ -200,6 +228,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\selection.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
