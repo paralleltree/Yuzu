@@ -16,7 +16,12 @@ namespace Yuzu.Plugins
     {
         internal static string PluginPath => "Plugins";
 
+        [ImportMany]
+        IEnumerable<IScoreBookExportPlugin> bookExportPlugins = Enumerable.Empty<IScoreBookExportPlugin>();
+
         public List<string> FailedFiles { get; private set; } = new List<string>();
+
+        public IEnumerable<IScoreBookExportPlugin> ScoreBookExportPlugins => bookExportPlugins;
 
         private PluginManager()
         {

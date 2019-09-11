@@ -157,5 +157,13 @@ namespace Yuzu.Core
                 return Encoding.UTF8.GetString(stream.ToArray());
             }
         }
+
+        public ScoreBook Clone()
+        {
+            var serialized = Newtonsoft.Json.JsonConvert.SerializeObject(this, SerializerSettings);
+            var book = Newtonsoft.Json.JsonConvert.DeserializeObject<ScoreBook>(serialized);
+            book.Path = Path;
+            return book;
+        }
     }
 }

@@ -75,6 +75,7 @@
     <Compile Include="Drawing\GraphicsExtensions.cs" />
     <Compile Include="Drawing\NoteGraphics.cs" />
     <Compile Include="Plugins\PluginManager.cs" />
+    <Compile Include="Plugins\ScoreBookExportPluginArgs.cs" />
     <Compile Include="UI\ControlExtensions.cs" />
     <Compile Include="UI\Data\Score.cs" />
     <Compile Include="UI\Data\Track\Field.cs" />
@@ -239,6 +240,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\selection.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\blue-document-export.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
