@@ -67,6 +67,7 @@ namespace Yuzu.UI
             InitializeComponent();
             Size = new Size(420, 700);
             Icon = Resources.MainIcon;
+            AllowDrop = true;
             ToolStripManager.RenderMode = ToolStripManagerRenderMode.System;
 
             OperationManager = new OperationManager();
@@ -140,6 +141,24 @@ namespace Yuzu.UI
 
         public MainForm(string path) : this()
         {
+            LoadFile(path);
+        }
+
+        protected override void OnDragEnter(DragEventArgs e)
+        {
+            base.OnDragEnter(e);
+            e.Effect = DragDropEffects.None;
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            var items = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (items.Length == 1 && Path.GetExtension(items[0]) == FileExtension)
+                e.Effect = DragDropEffects.Copy;
+        }
+
+        protected override void OnDragDrop(DragEventArgs e)
+        {
+            base.OnDragDrop(e);
+            string path = ((string[])e.Data.GetData(DataFormats.FileDrop))[0];
+            if (OperationManager.IsChanged && !ConfirmDiscardChanges()) return;
             LoadFile(path);
         }
 
