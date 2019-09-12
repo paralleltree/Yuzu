@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using Yuzu.Core;
 using Yuzu.Core.Events;
 using Yuzu.Core.Track;
+using Yuzu.Plugins;
 using Yuzu.Properties;
 using Yuzu.UI.Operations;
 using Yuzu.UI.Forms;
@@ -23,6 +24,7 @@ namespace Yuzu.UI
         private readonly string FileExtension = ".ysf";
         private string FileTypeFilter => "Yuzu専用形式" + string.Format("({0})|{1}", "*" + FileExtension, "*" + FileExtension);
 
+        private Exporter lastExportCache;
         private bool isPreviewMode;
 
         private ScoreBook ScoreBook { get; set; }
@@ -30,6 +32,17 @@ namespace Yuzu.UI
         private OperationManager OperationManager { get; }
         private NoteView NoteView { get; }
         private ScrollBar NoteViewScrollBar { get; }
+
+        private PluginManager PluginManager { get; } = PluginManager.GetInstance();
+        private Exporter LastExportCache
+        {
+            get { return lastExportCache; }
+            set
+            {
+                lastExportCache = value;
+                LastExportCacheChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
 
         private bool IsPreviewMode
         {
@@ -46,6 +59,8 @@ namespace Yuzu.UI
                 NoteView.CircularObjectSize = value ? 7 : 11;
             }
         }
+
+        private event EventHandler LastExportCacheChanged;
 
         public MainForm()
         {
@@ -115,6 +130,12 @@ namespace Yuzu.UI
             NoteView.EditTarget = EditTarget.Field;
 
             LoadEmptyBook();
+
+            if (PluginManager.FailedFiles.Count > 0)
+            {
+                string message = "以下のプラグインの読み込みに失敗しました。DLLファイルがブロックされているか無効なファイルである可能性があります。";
+                MessageBox.Show(this, string.Join("\n", new[] { message }.Concat(PluginManager.FailedFiles)), Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -176,6 +197,7 @@ namespace Yuzu.UI
 
         protected void LoadBook(ScoreBook book)
         {
+            LastExportCache = null;
             ScoreBook = book;
             OperationManager.Clear();
             NoteView.Load(book.Score);
@@ -221,6 +243,23 @@ namespace Yuzu.UI
             OperationManager.CommitChanges();
         }
 
+        protected bool ExportFile(Exporter exporter)
+        {
+            CommitChanges();
+            try
+            {
+                exporter.Run();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "エクスポート中にエラーが発生しました。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Program.DumpExceptionTo(ex, "export_exception.json");
+                return false;
+            }
+            LastExportCache = exporter;
+            return true;
+        }
+
         protected void CommitChanges()
         {
             ScoreBook.Score = NoteView.Restore();
@@ -261,12 +300,22 @@ namespace Yuzu.UI
                 ScoreBook.NotesDesignerName = form.NotesDesignerName;
             });
 
+            var exportPluginItems = PluginManager.ScoreBookExportPlugins.Select(p => new MenuItem(p.DisplayName, (s, e) =>
+            {
+                var dialog = new SaveFileDialog() { Filter = p.Filter, Title = "エクスポート先選択" };
+                if (dialog.ShowDialog(this) != DialogResult.OK) return;
+                var args = new ScoreBookExportPluginArgs(() => ScoreBook.Clone()) { OutputPath = dialog.FileName };
+                ExportFile(new Exporter(p, args));
+            }));
+
             var fileMenuItems = new MenuItem[]
             {
                 new MenuItem("新規作成(&N)", (s, e) => Clear()) { Shortcut = Shortcut.CtrlN },
                 new MenuItem("開く(&O)", (s, e) => OpenFile()) { Shortcut = Shortcut.CtrlO },
                 new MenuItem("保存(&S)", (s, e) => SaveFile()) { Shortcut = Shortcut.CtrlS },
                 new MenuItem("名前をつけて保存(&A)", (s, e) => SaveAs()) { Shortcut = Shortcut.CtrlShiftS },
+                new MenuItem("-"),
+                new MenuItem("エクスポート(&E)", exportPluginItems.ToArray()),
                 new MenuItem("-"),
                 bookPropertiesItem,
                 new MenuItem("-"),
@@ -424,6 +473,16 @@ namespace Yuzu.UI
             {
                 DisplayStyle = ToolStripItemDisplayStyle.Image
             };
+            var exportButton = new ToolStripButton("エクスポート", Resources.ExportIcon, (s, e) =>
+            {
+                if (LastExportCache == null) return;
+                if (!ExportFile(LastExportCache)) return;
+                MessageBox.Show(this, "再エクスポートが完了しました。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            })
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Image,
+                Enabled = false
+            };
 
             var undoButton = new ToolStripButton("元に戻す", Resources.UndoIcon, (s, e) => OperationManager.Undo())
             {
@@ -449,6 +508,8 @@ namespace Yuzu.UI
                 DisplayStyle = ToolStripItemDisplayStyle.Image
             };
 
+            LastExportCacheChanged += (s, e) => exportButton.Enabled = LastExportCache != null;
+
             OperationManager.OperationHistoryChanged += (s, e) =>
             {
                 undoButton.Enabled = OperationManager.CanUndo;
@@ -464,7 +525,7 @@ namespace Yuzu.UI
 
             return new ToolStrip(new ToolStripItem[]
             {
-                newFileButton, openFileButton, saveFileButton, new ToolStripSeparator(),
+                newFileButton, openFileButton, saveFileButton, exportButton, new ToolStripSeparator(),
                 undoButton, redoButton, new ToolStripSeparator(),
                 penButton, selectionButton, eraserButton
             });
@@ -592,6 +653,23 @@ namespace Yuzu.UI
                 fieldButton, laneButton, noteButton, flickButton, bellButton, bulletButton,
                 quantizeComboBox
             });
+        }
+    }
+
+    internal class Exporter
+    {
+        public IScoreBookExportPlugin LastUsedPlugin { get; }
+        public ScoreBookExportPluginArgs LastUsedArgs { get; }
+
+        public Exporter(IScoreBookExportPlugin plugin, ScoreBookExportPluginArgs args)
+        {
+            LastUsedPlugin = plugin;
+            LastUsedArgs = args;
+        }
+
+        public void Run()
+        {
+            LastUsedPlugin.Export(LastUsedArgs);
         }
     }
 }

@@ -40,10 +40,13 @@
       <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.Composition.Registration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Reactive, Version=4.1.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Reactive.4.1.6\lib\net46\System.Reactive.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reflection.Context" />
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
@@ -71,6 +74,8 @@
     <Compile Include="Drawing\DrawingContext.cs" />
     <Compile Include="Drawing\GraphicsExtensions.cs" />
     <Compile Include="Drawing\NoteGraphics.cs" />
+    <Compile Include="Plugins\PluginManager.cs" />
+    <Compile Include="Plugins\ScoreBookExportPluginArgs.cs" />
     <Compile Include="UI\ControlExtensions.cs" />
     <Compile Include="UI\Data\Score.cs" />
     <Compile Include="UI\Data\Track\Field.cs" />
@@ -177,6 +182,10 @@
       <Project>{e8d1bf85-f525-45e9-ab57-aa37b4740550}</Project>
       <Name>Yuzu.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Yuzu.Plugins\Yuzu.Plugins.csproj">
+      <Project>{134e91e4-19ae-43a3-9e65-c6549db32faa}</Project>
+      <Name>Yuzu.Plugins</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\tap.png" />
@@ -231,6 +240,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\selection.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\blue-document-export.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

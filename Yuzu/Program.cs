@@ -24,6 +24,14 @@ namespace Yuzu
             AppDomain.CurrentDomain.UnhandledException += (s, e) => DumpException((Exception)e.ExceptionObject, true);
 #endif
 
+            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+            {
+                if (e.RequestingAssembly == null) return null;
+                string dir = Path.GetDirectoryName(e.RequestingAssembly.Location);
+                string path = Path.Combine(dir, new AssemblyName(e.Name).Name + ".dll");
+                return File.Exists(path) ? Assembly.LoadFile(path) : null;
+            };
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new UI.MainForm());
