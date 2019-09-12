@@ -138,6 +138,11 @@ namespace Yuzu.UI
             }
         }
 
+        public MainForm(string path) : this()
+        {
+            LoadFile(path);
+        }
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             base.OnFormClosing(e);

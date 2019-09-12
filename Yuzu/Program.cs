@@ -16,8 +16,9 @@ namespace Yuzu
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(Application.ExecutablePath));
 
 #if !DEBUG
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
@@ -34,7 +35,7 @@ namespace Yuzu
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new UI.MainForm());
+            Application.Run(args.Length == 0 ? new UI.MainForm() : new UI.MainForm(args[0]));
         }
 
         internal static void DumpExceptionTo(Exception ex, string path)
