@@ -118,7 +118,7 @@ namespace Yuzu.UI
         }
         public int TailTick => HeadTick + (int)(ClientSize.Height * TicksPerBeat / HeightPerBeat);
         public int PaddingHeadTick => TicksPerBeat / 8;
-        public int QuantizeTick { get; set; } = 480;
+        public double QuantizeTick { get; set; } = 480;
         public bool Editable
         {
             get { return editable; }
@@ -391,9 +391,9 @@ namespace Yuzu.UI
 
                 int headBarTick = head + (tick - head) / barTick * barTick;
                 int offsetCount = (int)Math.Round((float)(tick - headBarTick) / QuantizeTick);
-                int maxOffsetCount = barTick / QuantizeTick;
-                int remnantTick = barTick - maxOffsetCount * QuantizeTick;
-                return headBarTick + ((tick - headBarTick >= barTick - remnantTick / 2) ? barTick : offsetCount * QuantizeTick);
+                int maxOffsetCount = (int)(barTick / QuantizeTick);
+                int remnantTick = barTick - (int)(maxOffsetCount * QuantizeTick);
+                return headBarTick + ((tick - headBarTick >= barTick - remnantTick / 2) ? barTick : (int)(offsetCount * QuantizeTick));
             }
 
             throw new InvalidOperationException();
@@ -1015,7 +1015,7 @@ namespace Yuzu.UI
                                 };
                                 var end = new FieldPoint()
                                 {
-                                    Tick = start.Tick + QuantizeTick,
+                                    Tick = start.Tick + (int)QuantizeTick,
                                     LaneOffset = start.LaneOffset
                                 };
                                 lane.Points.Add(start);
@@ -1305,7 +1305,7 @@ namespace Yuzu.UI
                 var range = new TickRange()
                 {
                     StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
-                    Duration = QuantizeTick
+                    Duration = (int)(QuantizeTick)
                 };
                 int minTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault()?.ValidRange.EndTick + 1 ?? -1;
                 int maxTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault(p => p.ValidRange.StartTick >= range.StartTick)?.ValidRange.StartTick - 1 ?? -1;
@@ -1395,7 +1395,7 @@ namespace Yuzu.UI
                     var range = new TickRange()
                     {
                         StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
-                        Duration = NewNoteType == NewNoteType.Tap ? 0 : QuantizeTick
+                        Duration = NewNoteType == NewNoteType.Tap ? 0 : (int)(QuantizeTick)
                     };
                     (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
                     minTick = minTick == -1 ? lane.ValidRange.StartTick : minTick + 1;
@@ -1476,7 +1476,7 @@ namespace Yuzu.UI
                 var range = new TickRange()
                 {
                     StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
-                    Duration = NewNoteType == NewNoteType.Tap ? 0 : QuantizeTick
+                    Duration = NewNoteType == NewNoteType.Tap ? 0 : (int)QuantizeTick
                 };
                 (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
                 minTick = minTick == -1 ? lane.Points.GetFirst().Tick : minTick + 1;

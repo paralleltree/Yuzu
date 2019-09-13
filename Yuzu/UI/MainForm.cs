@@ -627,9 +627,21 @@ namespace Yuzu.UI
                 Width = 80
             };
             quantizeComboBox.Items.AddRange(quantizeTicks.Select(p => p + "分").ToArray());
+            quantizeComboBox.Items.Add("カスタム");
             quantizeComboBox.SelectedIndexChanged += (s, e) =>
             {
-                noteView.QuantizeTick = noteView.TicksPerBeat * 4 / quantizeTicks[quantizeComboBox.SelectedIndex];
+                if (quantizeComboBox.SelectedIndex == quantizeComboBox.Items.Count - 1)
+                {
+                    var form = new CustomQuantizeSelectionForm(noteView.Score.TicksPerBeat * 4);
+                    if (form.ShowDialog(this) == DialogResult.OK)
+                    {
+                        NoteView.QuantizeTick = form.QuantizeTick;
+                    }
+                }
+                else
+                {
+                    noteView.QuantizeTick = noteView.TicksPerBeat * 4 / quantizeTicks[quantizeComboBox.SelectedIndex];
+                }
                 noteView.Focus();
             };
             quantizeComboBox.SelectedIndex = 1;
