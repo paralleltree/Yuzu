@@ -296,7 +296,7 @@ namespace Yuzu.UI
 
         private bool ConfirmDiscardChanges()
         {
-            return MessageBox.Show(this, "変更を保存せず終了しますか？", Program.ApplicationName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+            return MessageBox.Show(this, "変更は破棄されますがよろしいですか？", Program.ApplicationName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
         }
 
         private void InitializeScrollBar(int maxTick)
