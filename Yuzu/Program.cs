@@ -16,17 +16,26 @@ namespace Yuzu
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(Application.ExecutablePath));
 
 #if !DEBUG
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
             AppDomain.CurrentDomain.UnhandledException += (s, e) => DumpException((Exception)e.ExceptionObject, true);
 #endif
 
+            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+            {
+                if (e.RequestingAssembly == null) return null;
+                string dir = Path.GetDirectoryName(e.RequestingAssembly.Location);
+                string path = Path.Combine(dir, new AssemblyName(e.Name).Name + ".dll");
+                return File.Exists(path) ? Assembly.LoadFile(path) : null;
+            };
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new UI.MainForm());
+            Application.Run(args.Length == 0 ? new UI.MainForm() : new UI.MainForm(args[0]));
         }
 
         internal static void DumpExceptionTo(Exception ex, string path)

@@ -113,6 +113,16 @@ namespace Yuzu.Properties
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap ExportIcon {
+            get {
+                object obj = ResourceManager.GetObject("ExportIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap FieldIcon {
             get {
                 object obj = ResourceManager.GetObject("FieldIcon", resourceCulture);
@@ -206,6 +216,16 @@ namespace Yuzu.Properties
         internal static System.Drawing.Bitmap SaveIcon {
             get {
                 object obj = ResourceManager.GetObject("SaveIcon", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap SelectionIcon {
+            get {
+                object obj = ResourceManager.GetObject("SelectionIcon", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

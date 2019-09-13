@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{E8D1BF85-F525-45E9-AB57-AA37B4740550}</ProjectGuid>
+    <ProjectGuid>{134E91E4-19AE-43A3-9E65-C6549DB32FAA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Yuzu.Core</RootNamespace>
-    <AssemblyName>Yuzu.Core</AssemblyName>
+    <RootNamespace>Yuzu.Plugins</RootNamespace>
+    <AssemblyName>Yuzu.Plugins</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -31,9 +31,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Newtonsoft.Json, Version=12.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -44,27 +41,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EventCollection.cs" />
-    <Compile Include="Events\BPMChangeEvent.cs" />
-    <Compile Include="Events\EventBase.cs" />
-    <Compile Include="Events\HighSpeedChangeEvent.cs" />
-    <Compile Include="Events\TimeSignatureChangeEvent.cs" />
+    <Compile Include="IPlugin.cs" />
+    <Compile Include="IScoreBookExportPlugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Score.cs" />
-    <Compile Include="ScoreBook.cs" />
-    <Compile Include="Track\Field.cs" />
-    <Compile Include="Track\FieldLocation.cs" />
-    <Compile Include="Track\FieldObject.cs" />
-    <Compile Include="Track\FieldWall.cs" />
-    <Compile Include="Track\IMovableLane.cs" />
-    <Compile Include="Track\INoteContainer.cs" />
-    <Compile Include="Track\Note.cs" />
-    <Compile Include="Track\SideLane.cs" />
-    <Compile Include="Track\SurfaceLane.cs" />
-    <Compile Include="UI\SelectionRange.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <ProjectReference Include="..\Yuzu.Core\Yuzu.Core.csproj">
+      <Project>{e8d1bf85-f525-45e9-ab57-aa37b4740550}</Project>
+      <Name>Yuzu.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

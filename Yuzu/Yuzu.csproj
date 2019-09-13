@@ -40,10 +40,13 @@
       <HintPath>..\packages\Newtonsoft.Json.12.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.Composition.Registration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Reactive, Version=4.1.0.0, Culture=neutral, PublicKeyToken=94bc3704cddfc263, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Reactive.4.1.6\lib\net46\System.Reactive.dll</HintPath>
     </Reference>
+    <Reference Include="System.Reflection.Context" />
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.2\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
@@ -71,6 +74,8 @@
     <Compile Include="Drawing\DrawingContext.cs" />
     <Compile Include="Drawing\GraphicsExtensions.cs" />
     <Compile Include="Drawing\NoteGraphics.cs" />
+    <Compile Include="Plugins\PluginManager.cs" />
+    <Compile Include="Plugins\ScoreBookExportPluginArgs.cs" />
     <Compile Include="UI\ControlExtensions.cs" />
     <Compile Include="UI\Data\Score.cs" />
     <Compile Include="UI\Data\Track\Field.cs" />
@@ -85,8 +90,32 @@
     <Compile Include="UI\Forms\BookPropertiesForm.Designer.cs">
       <DependentUpon>BookPropertiesForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="UI\Forms\BPMSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\BPMSelectionForm.Designer.cs">
+      <DependentUpon>BPMSelectionForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Forms\CheckableToolStripSplitButton.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\CustomQuantizeSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\CustomQuantizeSelectionForm.Designer.cs">
+      <DependentUpon>CustomQuantizeSelectionForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\HighSpeedSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\HighSpeedSelectionForm.Designer.cs">
+      <DependentUpon>HighSpeedSelectionForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UI\Forms\TimesignatureSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\TimesignatureSelectionForm.Designer.cs">
+      <DependentUpon>TimesignatureSelectionForm.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\Forms\VersionInfoForm.cs">
       <SubType>Form</SubType>
@@ -109,6 +138,7 @@
       <DependentUpon>NoteView.cs</DependentUpon>
     </Compile>
     <Compile Include="UI\Operations\CompositeOperation.cs" />
+    <Compile Include="UI\Operations\EventOperations.cs" />
     <Compile Include="UI\Operations\FieldObjectOperations.cs" />
     <Compile Include="UI\Operations\IOperation.cs" />
     <Compile Include="UI\Operations\NoteOperations.cs" />
@@ -126,6 +156,18 @@
     </Compile>
     <EmbeddedResource Include="UI\Forms\BookPropertiesForm.resx">
       <DependentUpon>BookPropertiesForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\BPMSelectionForm.resx">
+      <DependentUpon>BPMSelectionForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\CustomQuantizeSelectionForm.resx">
+      <DependentUpon>CustomQuantizeSelectionForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\HighSpeedSelectionForm.resx">
+      <DependentUpon>HighSpeedSelectionForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\TimesignatureSelectionForm.resx">
+      <DependentUpon>TimesignatureSelectionForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\VersionInfoForm.resx">
       <DependentUpon>VersionInfoForm.cs</DependentUpon>
@@ -148,6 +190,10 @@
     <ProjectReference Include="..\Yuzu.Core\Yuzu.Core.csproj">
       <Project>{e8d1bf85-f525-45e9-ab57-aa37b4740550}</Project>
       <Name>Yuzu.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Yuzu.Plugins\Yuzu.Plugins.csproj">
+      <Project>{134e91e4-19ae-43a3-9e65-c6549db32faa}</Project>
+      <Name>Yuzu.Plugins</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -200,6 +246,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\icon.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\selection.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\blue-document-export.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
