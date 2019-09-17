@@ -253,5 +253,11 @@
   <ItemGroup>
     <None Include="Resources\blue-document-export.png" />
   </ItemGroup>
+  <ItemGroup>
+    <ContentWithTargetPath Include="Resources\guide.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <TargetPath>guide.mp3</TargetPath>
+    </ContentWithTargetPath>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

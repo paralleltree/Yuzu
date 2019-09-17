@@ -18,7 +18,7 @@ after_build:
 
       Get-ChildItem Yuzu\bin\$env:CONFIGURATION | Copy-Item -Destination $artifacts -Recurse -Container
 
-      Get-ChildItem $artifacts -File -Recurse -Exclude *.exe, *.dll, *.config | Remove-Item
+      Get-ChildItem $artifacts -File -Recurse -Exclude *.exe, *.dll, *.config, *.mp3 | Remove-Item
 
       $shell = New-Object -ComObject("WScript.Shell")
 
