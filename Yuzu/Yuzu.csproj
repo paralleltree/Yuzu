@@ -99,6 +99,12 @@
     <Compile Include="UI\Forms\CheckableToolStripSplitButton.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="UI\Forms\CustomQuantizeSelectionForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UI\Forms\CustomQuantizeSelectionForm.Designer.cs">
+      <DependentUpon>CustomQuantizeSelectionForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="UI\Forms\HighSpeedSelectionForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -153,6 +159,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\BPMSelectionForm.resx">
       <DependentUpon>BPMSelectionForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UI\Forms\CustomQuantizeSelectionForm.resx">
+      <DependentUpon>CustomQuantizeSelectionForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="UI\Forms\HighSpeedSelectionForm.resx">
       <DependentUpon>HighSpeedSelectionForm.cs</DependentUpon>

@@ -52,6 +52,7 @@ namespace Yuzu.UI.Operations
         {
             UndoStack.Clear();
             RedoStack.Clear();
+            LastCommittedOperation = null;
             OperationHistoryChanged?.Invoke(this, EventArgs.Empty);
         }
 

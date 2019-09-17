@@ -67,6 +67,7 @@ namespace Yuzu.UI
             InitializeComponent();
             Size = new Size(420, 700);
             Icon = Resources.MainIcon;
+            AllowDrop = true;
             ToolStripManager.RenderMode = ToolStripManagerRenderMode.System;
 
             OperationManager = new OperationManager();
@@ -136,6 +137,29 @@ namespace Yuzu.UI
                 string message = "以下のプラグインの読み込みに失敗しました。DLLファイルがブロックされているか無効なファイルである可能性があります。";
                 MessageBox.Show(this, string.Join("\n", new[] { message }.Concat(PluginManager.FailedFiles)), Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
+        }
+
+        public MainForm(string path) : this()
+        {
+            LoadFile(path);
+        }
+
+        protected override void OnDragEnter(DragEventArgs e)
+        {
+            base.OnDragEnter(e);
+            e.Effect = DragDropEffects.None;
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop)) return;
+            var items = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (items.Length == 1 && Path.GetExtension(items[0]) == FileExtension)
+                e.Effect = DragDropEffects.Copy;
+        }
+
+        protected override void OnDragDrop(DragEventArgs e)
+        {
+            base.OnDragDrop(e);
+            string path = ((string[])e.Data.GetData(DataFormats.FileDrop))[0];
+            if (OperationManager.IsChanged && !ConfirmDiscardChanges()) return;
+            LoadFile(path);
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
@@ -272,7 +296,7 @@ namespace Yuzu.UI
 
         private bool ConfirmDiscardChanges()
         {
-            return MessageBox.Show(this, "変更を保存せず終了しますか？", Program.ApplicationName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+            return MessageBox.Show(this, "変更は破棄されますがよろしいですか？", Program.ApplicationName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes;
         }
 
         private void InitializeScrollBar(int maxTick)
@@ -603,9 +627,21 @@ namespace Yuzu.UI
                 Width = 80
             };
             quantizeComboBox.Items.AddRange(quantizeTicks.Select(p => p + "分").ToArray());
+            quantizeComboBox.Items.Add("カスタム");
             quantizeComboBox.SelectedIndexChanged += (s, e) =>
             {
-                noteView.QuantizeTick = noteView.TicksPerBeat * 4 / quantizeTicks[quantizeComboBox.SelectedIndex];
+                if (quantizeComboBox.SelectedIndex == quantizeComboBox.Items.Count - 1)
+                {
+                    var form = new CustomQuantizeSelectionForm(noteView.Score.TicksPerBeat * 4);
+                    if (form.ShowDialog(this) == DialogResult.OK)
+                    {
+                        NoteView.QuantizeTick = form.QuantizeTick;
+                    }
+                }
+                else
+                {
+                    noteView.QuantizeTick = noteView.TicksPerBeat * 4 / quantizeTicks[quantizeComboBox.SelectedIndex];
+                }
                 noteView.Focus();
             };
             quantizeComboBox.SelectedIndex = 1;
