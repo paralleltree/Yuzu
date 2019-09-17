@@ -16,6 +16,7 @@ using Yuzu.Plugins;
 using Yuzu.Properties;
 using Yuzu.UI.Operations;
 using Yuzu.UI.Forms;
+using Yuzu.Media;
 
 namespace Yuzu.UI
 {
@@ -33,6 +34,7 @@ namespace Yuzu.UI
         private NoteView NoteView { get; }
         private ScrollBar NoteViewScrollBar { get; }
 
+        private SoundSource CurrentSoundSource;
         private PluginManager PluginManager { get; } = PluginManager.GetInstance();
         private Exporter LastExportCache
         {
@@ -316,12 +318,13 @@ namespace Yuzu.UI
         {
             var bookPropertiesItem = new MenuItem("譜面プロパティ(&P)", (s, e) =>
             {
-                var form = new BookPropertiesForm(ScoreBook);
+                var form = new BookPropertiesForm(ScoreBook, CurrentSoundSource);
                 if (form.ShowDialog(this) != DialogResult.OK) return;
 
                 ScoreBook.Title = form.Title;
                 ScoreBook.ArtistName = form.ArtistName;
                 ScoreBook.NotesDesignerName = form.NotesDesignerName;
+                CurrentSoundSource = form.SoundSource;
             });
 
             var exportPluginItems = PluginManager.ScoreBookExportPlugins.Select(p => new MenuItem(p.DisplayName, (s, e) =>
