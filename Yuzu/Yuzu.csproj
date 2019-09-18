@@ -70,6 +70,8 @@
   <ItemGroup>
     <Compile Include="Collections\AVLTree.cs" />
     <Compile Include="Collections\CollectionExtensions.cs" />
+    <Compile Include="Configuration\SettingsBase.cs" />
+    <Compile Include="Configuration\SoundSettings.cs" />
     <Compile Include="Drawing\ColorProfile.cs" />
     <Compile Include="Drawing\DrawingContext.cs" />
     <Compile Include="Drawing\GraphicsExtensions.cs" />

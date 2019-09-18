@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using Yuzu.Configuration;
 using Yuzu.Core;
 using Yuzu.Core.Events;
 using Yuzu.Core.Track;
@@ -230,6 +231,15 @@ namespace Yuzu.UI
             InitializeScrollBar(book.Score.GetLastTick());
             UpdateThumbHeight();
             SetText(book.Path);
+
+            if (!string.IsNullOrEmpty(book.Path))
+            {
+                SoundSettings.Default.ScoreSounds.TryGetValue(book.Path, out CurrentSoundSource);
+            }
+            else
+            {
+                CurrentSoundSource = null;
+            }
         }
 
         protected void LoadEmptyBook()
@@ -267,6 +277,11 @@ namespace Yuzu.UI
             CommitChanges();
             ScoreBook.Save();
             OperationManager.CommitChanges();
+            if (CurrentSoundSource != null)
+            {
+                SoundSettings.Default.ScoreSounds[ScoreBook.Path] = CurrentSoundSource;
+                SoundSettings.Default.Save();
+            }
         }
 
         protected bool ExportFile(Exporter exporter)
