@@ -27,6 +27,7 @@ namespace Yuzu
             AppDomain.CurrentDomain.UnhandledException += (s, e) => DumpException((Exception)e.ExceptionObject, true);
 #endif
 
+            UpgradeSetting(ApplicationSettings.Default);
             UpgradeSetting(SoundSettings.Default);
 
             AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>

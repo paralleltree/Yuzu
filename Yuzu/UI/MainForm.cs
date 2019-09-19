@@ -185,7 +185,10 @@ namespace Yuzu.UI
             if (OperationManager.IsChanged && !ConfirmDiscardChanges())
             {
                 e.Cancel = true;
+                return;
             }
+
+            ApplicationSettings.Default.Save();
         }
 
         protected void Clear()
@@ -493,6 +496,16 @@ namespace Yuzu.UI
                 addBpmItem, addTimeSignatureItem, addHighSpeedItem
             };
 
+            var previewOnlyNotesItem = new MenuItem("ベル/敵弾でガイド音を鳴らさない", (s, e) =>
+            {
+                var item = s as MenuItem;
+                item.Checked = !item.Checked;
+                ApplicationSettings.Default.PreviewOnlyNotes = item.Checked;
+            })
+            {
+                Checked = ApplicationSettings.Default.PreviewOnlyNotes
+            };
+
             var playItem = new MenuItem("再生/停止", (s, e) =>
             {
                 if (PreviewManager.Playing)
@@ -515,6 +528,7 @@ namespace Yuzu.UI
                 EventHandler lambda = null;
                 lambda = (p, q) =>
                 {
+                    previewOnlyNotesItem.Enabled = true;
                     PreviewManager.Finished -= lambda;
                     NoteView.CurrentTick = startTick;
                     NoteView.Editable = CanEdit;
@@ -524,7 +538,8 @@ namespace Yuzu.UI
                 {
                     var score = NoteView.Restore();
                     PreviewManager.TicksPerBeat = score.TicksPerBeat;
-                    if (!PreviewManager.Start(score, CurrentSoundSource, startTick)) return;
+                    if (!PreviewManager.Start(score, CurrentSoundSource, startTick, ApplicationSettings.Default.PreviewOnlyNotes)) return;
+                    previewOnlyNotesItem.Enabled = false;
                     PreviewManager.Finished += lambda;
                     NoteView.Editable = CanEdit;
                 }
@@ -536,7 +551,8 @@ namespace Yuzu.UI
 
             var playMenuItems = new MenuItem[]
             {
-                playItem
+                playItem, new MenuItem("-"),
+                previewOnlyNotesItem
             };
 
             var helpMenuItems = new MenuItem[]

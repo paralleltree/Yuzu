@@ -189,12 +189,12 @@ namespace Yuzu.Media
 
     internal static class Extensions
     {
-        public static bool Start(this SoundPreviewManager manager, Score score, SoundSource source, int startTick)
+        public static bool Start(this SoundPreviewManager manager, Score score, SoundSource source, int startTick, bool onlyNotes)
         {
-            return manager.Start(source, startTick, score.GetGuideTicks(), score.Events.BPMChangeEvents);
+            return manager.Start(source, startTick, score.GetGuideTicks(onlyNotes), score.Events.BPMChangeEvents);
         }
 
-        public static HashSet<int> GetGuideTicks(this Score score)
+        public static HashSet<int> GetGuideTicks(this Score score, bool onlyNotes)
         {
             var set = new HashSet<int>();
 
@@ -206,6 +206,11 @@ namespace Yuzu.Media
             foreach (int tick in score.SurfaceLanes.SelectMany(p => ExtractNotes(p.Notes))) set.Add(tick);
 
             foreach (var flick in score.Flicks) set.Add(flick.Position.Tick);
+
+            if (onlyNotes) return set;
+
+            foreach (var bell in score.Bells) set.Add(bell.Position.Tick);
+            foreach (var bullet in score.Bullets) set.Add(bullet.Position.Tick);
 
             return set;
         }
