@@ -186,4 +186,28 @@ namespace Yuzu.Media
             Tick = tick;
         }
     }
+
+    internal static class Extensions
+    {
+        public static bool Start(this SoundPreviewManager manager, Score score, SoundSource source, int startTick)
+        {
+            return manager.Start(source, startTick, score.GetGuideTicks(), score.Events.BPMChangeEvents);
+        }
+
+        public static HashSet<int> GetGuideTicks(this Score score)
+        {
+            var set = new HashSet<int>();
+
+            IEnumerable<int> ExtractNotes(IEnumerable<Note> notes) => notes.SelectMany(q => q.TickRange.Duration == 0 ? new[] { q.TickRange.StartTick } : new[] { q.TickRange.StartTick, q.TickRange.EndTick });
+            IEnumerable<int> GetSideLaneTicks(FieldSide fs) => fs.SideLanes.SelectMany(p => ExtractNotes(p.Notes));
+            foreach (int tick in GetSideLaneTicks(score.Field.Left)) set.Add(tick);
+            foreach (int tick in GetSideLaneTicks(score.Field.Right)) set.Add(tick);
+
+            foreach (int tick in score.SurfaceLanes.SelectMany(p => ExtractNotes(p.Notes))) set.Add(tick);
+
+            foreach (var flick in score.Flicks) set.Add(flick.Position.Tick);
+
+            return set;
+        }
+    }
 }

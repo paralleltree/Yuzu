@@ -35,6 +35,7 @@ namespace Yuzu.UI
         private NoteView NoteView { get; }
         private ScrollBar NoteViewScrollBar { get; }
 
+        private SoundPreviewManager PreviewManager { get; }
         private SoundSource CurrentSoundSource;
         private PluginManager PluginManager { get; } = PluginManager.GetInstance();
         private Exporter LastExportCache
@@ -62,6 +63,7 @@ namespace Yuzu.UI
                 NoteView.CircularObjectSize = value ? 7 : 11;
             }
         }
+        private bool CanEdit => !IsPreviewMode && !PreviewManager.Playing;
 
         private event EventHandler LastExportCacheChanged;
 
@@ -124,6 +126,13 @@ namespace Yuzu.UI
                 }
             }
 
+            PreviewManager = new SoundPreviewManager(NoteView)
+            {
+                ClapSource = SoundSettings.Default.ClapSource
+            };
+            PreviewManager.TickUpdated += (s, e) => Invoke((MethodInvoker)(() => NoteView.CurrentTick = e.Tick));
+            PreviewManager.ExceptionThrown += (s, e) => MessageBox.Show(this, "プレビュー中にエラーが発生しました。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             Menu = CreateMainMenu();
             Controls.Add(NoteView);
             Controls.Add(NoteViewScrollBar);
@@ -134,6 +143,11 @@ namespace Yuzu.UI
             NoteView.EditTarget = EditTarget.Field;
 
             LoadEmptyBook();
+
+            if (!PreviewManager.IsSupported)
+            {
+                MessageBox.Show(this, "再生プレビューがサポートされていない環境です", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
 
             if (PluginManager.FailedFiles.Count > 0)
             {
@@ -479,6 +493,52 @@ namespace Yuzu.UI
                 addBpmItem, addTimeSignatureItem, addHighSpeedItem
             };
 
+            var playItem = new MenuItem("再生/停止", (s, e) =>
+            {
+                if (PreviewManager.Playing)
+                {
+                    PreviewManager.Stop();
+                    return;
+                }
+                if (CurrentSoundSource == null)
+                {
+                    MessageBox.Show(this, "プレビュー用音源ファイルが設定されていません。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (!File.Exists(CurrentSoundSource.FilePath))
+                {
+                    MessageBox.Show(this, "プレビュー用音源ファイルが見つかりません。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                int startTick = NoteView.CurrentTick;
+                EventHandler lambda = null;
+                lambda = (p, q) =>
+                {
+                    PreviewManager.Finished -= lambda;
+                    NoteView.CurrentTick = startTick;
+                    NoteView.Editable = CanEdit;
+                };
+
+                try
+                {
+                    var score = NoteView.Restore();
+                    PreviewManager.TicksPerBeat = score.TicksPerBeat;
+                    if (!PreviewManager.Start(score, CurrentSoundSource, startTick)) return;
+                    PreviewManager.Finished += lambda;
+                    NoteView.Editable = CanEdit;
+                }
+                catch (Exception ex)
+                {
+                    Program.DumpExceptionTo(ex, "sound_exception.json");
+                }
+            }, (Shortcut)Keys.Space);
+
+            var playMenuItems = new MenuItem[]
+            {
+                playItem
+            };
+
             var helpMenuItems = new MenuItem[]
             {
                 new MenuItem("Wikiを開く", (s, e) => System.Diagnostics.Process.Start("https://github.com/paralleltree/Yuzu/wiki"), Shortcut.F1),
@@ -497,6 +557,7 @@ namespace Yuzu.UI
                 new MenuItem("編集(&E)", editMenuItems),
                 new MenuItem("表示(&V)", viewMenuItems),
                 new MenuItem("挿入(&I)", insertMenuItems),
+                new MenuItem("再生(&P)", playMenuItems),
                 new MenuItem("ヘルプ(&H)", helpMenuItems)
             });
         }
