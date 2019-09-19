@@ -80,6 +80,7 @@
     <Compile Include="Drawing\DrawingContext.cs" />
     <Compile Include="Drawing\GraphicsExtensions.cs" />
     <Compile Include="Drawing\NoteGraphics.cs" />
+    <Compile Include="Media\SoundManager.cs" />
     <Compile Include="Media\SoundSource.cs" />
     <Compile Include="Plugins\PluginManager.cs" />
     <Compile Include="Plugins\ScoreBookExportPluginArgs.cs" />
