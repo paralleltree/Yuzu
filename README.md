@@ -8,7 +8,7 @@
 今後実装予定の項目については[Projects](https://github.com/paralleltree/Yuzu/projects)を参照してください。
 
 ## ダウンロード
-現在の最新版は[v0.3.0](https://github.com/paralleltree/Yuzu/releases)です。
+現在の最新版は[v0.4.0](https://github.com/paralleltree/Yuzu/releases)です。
 
 ## 使い方
 [Wiki](https://github.com/paralleltree/Yuzu/wiki)を参照してください。
@@ -35,3 +35,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ### Fugue Icons
 > Icons by Yusuke Kamiyamane. Licensed under a Creative Commons Attribution 3.0 License.
+
+### Bass Audio Library
+> BASS is free for non-commercial use. If you are a non-commercial entity (eg. an individual) and you are not making any money from your product (through sales/advertising/etc), then you can use BASS in it for free.  
+If you wish to use BASS in commercial products, then please also see the next section.  
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, BASS IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A PARTICULAR PURPOSE. THE AUTHORS SHALL NOT BE HELD LIABLE FOR ANY DAMAGE THAT MAY RESULT FROM THE USE OF BASS.  
+YOU USE BASS ENTIRELY AT YOUR OWN RISK.  
+Usage of BASS indicates that you agree to the above conditions.  
+All trademarks and other registered names contained in the BASS package are the property of their respective owners.

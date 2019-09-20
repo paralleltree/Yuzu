@@ -92,8 +92,13 @@ namespace Yuzu.UI
             set
             {
                 currentTick = value;
-                Invalidate();
+                if (value < HeadTick || value > TailTick)
+                {
+                    HeadTick = value;
+                    DragScroll?.Invoke(this, EventArgs.Empty);
+                }
                 CurrentTickChanged?.Invoke(this, EventArgs.Empty);
+                Invalidate();
             }
         }
         public SelectionRange SelectedRange

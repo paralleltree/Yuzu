@@ -21,6 +21,7 @@ namespace Yuzu.UI.Forms
                 speedRatioBox.SelectAll();
             }
         }
+
         public HighSpeedSelectionForm()
         {
             InitializeComponent();

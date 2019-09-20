@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using Yuzu.Configuration;
+
 namespace Yuzu
 {
     static class Program
@@ -24,6 +26,9 @@ namespace Yuzu
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
             AppDomain.CurrentDomain.UnhandledException += (s, e) => DumpException((Exception)e.ExceptionObject, true);
 #endif
+
+            UpgradeSetting(ApplicationSettings.Default);
+            UpgradeSetting(SoundSettings.Default);
 
             AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
             {
@@ -49,6 +54,21 @@ namespace Yuzu
             if (!forceClose) return;
             MessageBox.Show("エラーが発生しました。\nアプリケーションを終了します。", ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
             Environment.Exit(1);
+        }
+
+        static bool UpgradeSetting(SettingsBase setting)
+        {
+            try
+            {
+                if (!setting.HasUpgraded) setting.Upgrade();
+            }
+            catch (Exception ex)
+            {
+                DumpExceptionTo(ex, "configuration_exception.json");
+                setting.Reset();
+                return false;
+            }
+            return true;
         }
     }
 }
