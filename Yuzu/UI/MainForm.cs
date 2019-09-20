@@ -468,7 +468,10 @@ namespace Yuzu.UI
 
             var addHighSpeedItem = new MenuItem("ハイスピード", (s, e) =>
             {
-                var form = new HighSpeedSelectionForm();
+                var form = new HighSpeedSelectionForm()
+                {
+                    SpeedRatio = NoteView.Score.Events.HighSpeedChangeEvents.OrderBy(p => p.Tick).LastOrDefault(p => p.Tick <= NoteView.CurrentTick)?.SpeedRatio ?? 1.0m
+                };
                 if (form.ShowDialog(this) != DialogResult.OK) return;
 
                 var item = new HighSpeedChangeEvent()
