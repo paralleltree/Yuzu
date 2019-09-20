@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Yuzu.Core;
+using Yuzu.Media;
 
 namespace Yuzu.UI.Forms
 {
@@ -32,7 +33,13 @@ namespace Yuzu.UI.Forms
             set => notesDesignerBox.Text = value;
         }
 
-        public BookPropertiesForm(ScoreBook book)
+        public SoundSource SoundSource
+        {
+            get => soundSourceSelector.SoundSource;
+            set => soundSourceSelector.SoundSource = value;
+        }
+
+        public BookPropertiesForm(ScoreBook book, SoundSource soundSource)
         {
             InitializeComponent();
 
@@ -44,6 +51,7 @@ namespace Yuzu.UI.Forms
             titleBox.Text = book.Title;
             artistBox.Text = book.ArtistName;
             notesDesignerBox.Text = book.NotesDesignerName;
+            if (soundSource != null) soundSourceSelector.SoundSource = soundSource;
         }
     }
 }

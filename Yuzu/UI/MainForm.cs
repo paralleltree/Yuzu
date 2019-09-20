@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
+using Yuzu.Configuration;
 using Yuzu.Core;
 using Yuzu.Core.Events;
 using Yuzu.Core.Track;
@@ -16,6 +17,7 @@ using Yuzu.Plugins;
 using Yuzu.Properties;
 using Yuzu.UI.Operations;
 using Yuzu.UI.Forms;
+using Yuzu.Media;
 
 namespace Yuzu.UI
 {
@@ -33,6 +35,8 @@ namespace Yuzu.UI
         private NoteView NoteView { get; }
         private ScrollBar NoteViewScrollBar { get; }
 
+        private SoundPreviewManager PreviewManager { get; }
+        private SoundSource CurrentSoundSource;
         private PluginManager PluginManager { get; } = PluginManager.GetInstance();
         private Exporter LastExportCache
         {
@@ -59,6 +63,7 @@ namespace Yuzu.UI
                 NoteView.CircularObjectSize = value ? 7 : 11;
             }
         }
+        private bool CanEdit => !IsPreviewMode && !PreviewManager.Playing;
 
         private event EventHandler LastExportCacheChanged;
 
@@ -121,6 +126,13 @@ namespace Yuzu.UI
                 }
             }
 
+            PreviewManager = new SoundPreviewManager(NoteView)
+            {
+                ClapSource = SoundSettings.Default.ClapSource
+            };
+            PreviewManager.TickUpdated += (s, e) => Invoke((MethodInvoker)(() => NoteView.CurrentTick = e.Tick));
+            PreviewManager.ExceptionThrown += (s, e) => MessageBox.Show(this, "プレビュー中にエラーが発生しました。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Error);
+
             Menu = CreateMainMenu();
             Controls.Add(NoteView);
             Controls.Add(NoteViewScrollBar);
@@ -131,6 +143,11 @@ namespace Yuzu.UI
             NoteView.EditTarget = EditTarget.Field;
 
             LoadEmptyBook();
+
+            if (!PreviewManager.IsSupported)
+            {
+                MessageBox.Show(this, "再生プレビューがサポートされていない環境です", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
 
             if (PluginManager.FailedFiles.Count > 0)
             {
@@ -168,7 +185,10 @@ namespace Yuzu.UI
             if (OperationManager.IsChanged && !ConfirmDiscardChanges())
             {
                 e.Cancel = true;
+                return;
             }
+
+            ApplicationSettings.Default.Save();
         }
 
         protected void Clear()
@@ -228,6 +248,15 @@ namespace Yuzu.UI
             InitializeScrollBar(book.Score.GetLastTick());
             UpdateThumbHeight();
             SetText(book.Path);
+
+            if (!string.IsNullOrEmpty(book.Path))
+            {
+                SoundSettings.Default.ScoreSounds.TryGetValue(book.Path, out CurrentSoundSource);
+            }
+            else
+            {
+                CurrentSoundSource = null;
+            }
         }
 
         protected void LoadEmptyBook()
@@ -265,6 +294,11 @@ namespace Yuzu.UI
             CommitChanges();
             ScoreBook.Save();
             OperationManager.CommitChanges();
+            if (CurrentSoundSource != null)
+            {
+                SoundSettings.Default.ScoreSounds[ScoreBook.Path] = CurrentSoundSource;
+                SoundSettings.Default.Save();
+            }
         }
 
         protected bool ExportFile(Exporter exporter)
@@ -316,12 +350,13 @@ namespace Yuzu.UI
         {
             var bookPropertiesItem = new MenuItem("譜面プロパティ(&P)", (s, e) =>
             {
-                var form = new BookPropertiesForm(ScoreBook);
+                var form = new BookPropertiesForm(ScoreBook, CurrentSoundSource);
                 if (form.ShowDialog(this) != DialogResult.OK) return;
 
                 ScoreBook.Title = form.Title;
                 ScoreBook.ArtistName = form.ArtistName;
                 ScoreBook.NotesDesignerName = form.NotesDesignerName;
+                CurrentSoundSource = form.SoundSource;
             });
 
             var exportPluginItems = PluginManager.ScoreBookExportPlugins.Select(p => new MenuItem(p.DisplayName, (s, e) =>
@@ -461,6 +496,65 @@ namespace Yuzu.UI
                 addBpmItem, addTimeSignatureItem, addHighSpeedItem
             };
 
+            var previewOnlyNotesItem = new MenuItem("ベル/敵弾でガイド音を鳴らさない", (s, e) =>
+            {
+                var item = s as MenuItem;
+                item.Checked = !item.Checked;
+                ApplicationSettings.Default.PreviewOnlyNotes = item.Checked;
+            })
+            {
+                Checked = ApplicationSettings.Default.PreviewOnlyNotes
+            };
+
+            var playItem = new MenuItem("再生/停止", (s, e) =>
+            {
+                if (PreviewManager.Playing)
+                {
+                    PreviewManager.Stop();
+                    return;
+                }
+                if (CurrentSoundSource == null)
+                {
+                    MessageBox.Show(this, "プレビュー用音源ファイルが設定されていません。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (!File.Exists(CurrentSoundSource.FilePath))
+                {
+                    MessageBox.Show(this, "プレビュー用音源ファイルが見つかりません。", Program.ApplicationName, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                int startTick = NoteView.CurrentTick;
+                EventHandler lambda = null;
+                lambda = (p, q) =>
+                {
+                    previewOnlyNotesItem.Enabled = true;
+                    PreviewManager.Finished -= lambda;
+                    NoteView.CurrentTick = startTick;
+                    NoteView.Editable = CanEdit;
+                };
+
+                try
+                {
+                    var score = NoteView.Restore();
+                    PreviewManager.TicksPerBeat = score.TicksPerBeat;
+                    if (!PreviewManager.Start(score, CurrentSoundSource, startTick, ApplicationSettings.Default.PreviewOnlyNotes)) return;
+                    previewOnlyNotesItem.Enabled = false;
+                    PreviewManager.Finished += lambda;
+                    NoteView.Editable = CanEdit;
+                }
+                catch (Exception ex)
+                {
+                    Program.DumpExceptionTo(ex, "sound_exception.json");
+                }
+            }, (Shortcut)Keys.Space);
+
+            var playMenuItems = new MenuItem[]
+            {
+                playItem, new MenuItem("-"),
+                previewOnlyNotesItem
+            };
+
             var helpMenuItems = new MenuItem[]
             {
                 new MenuItem("Wikiを開く", (s, e) => System.Diagnostics.Process.Start("https://github.com/paralleltree/Yuzu/wiki"), Shortcut.F1),
@@ -479,6 +573,7 @@ namespace Yuzu.UI
                 new MenuItem("編集(&E)", editMenuItems),
                 new MenuItem("表示(&V)", viewMenuItems),
                 new MenuItem("挿入(&I)", insertMenuItems),
+                new MenuItem("再生(&P)", playMenuItems),
                 new MenuItem("ヘルプ(&H)", helpMenuItems)
             });
         }

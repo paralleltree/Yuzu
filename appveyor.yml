@@ -16,9 +16,11 @@ after_build:
 
       New-Item -Type directory $artifacts
 
-      Get-ChildItem Yuzu\bin\$env:CONFIGURATION | Copy-Item -Destination $artifacts -Recurse -Container
+      Get-ChildItem Yuzu\bin\x86\$env:CONFIGURATION | Copy-Item -Destination $artifacts -Recurse -Container
 
-      Get-ChildItem $artifacts -File -Recurse -Exclude *.exe, *.dll, *.config | Remove-Item
+      Get-ChildItem $artifacts -File -Recurse -Exclude *.exe, *.dll, *.config, *.mp3 | Remove-Item
+
+      Get-ChildItem $artifacts\Addon -File -Recurse -Include basszxtune.dll | Remove-Item
 
       $shell = New-Object -ComObject("WScript.Shell")
 
