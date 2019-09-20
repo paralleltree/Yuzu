@@ -8,7 +8,7 @@
 今後実装予定の項目については[Projects](https://github.com/paralleltree/Yuzu/projects)を参照してください。
 
 ## ダウンロード
-現在の最新版は[v0.3.0](https://github.com/paralleltree/Yuzu/releases)です。
+現在の最新版は[v0.4.0](https://github.com/paralleltree/Yuzu/releases)です。
 
 ## 使い方
 [Wiki](https://github.com/paralleltree/Yuzu/wiki)を参照してください。
