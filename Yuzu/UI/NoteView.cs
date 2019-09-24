@@ -1318,7 +1318,7 @@ namespace Yuzu.UI
                     StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
                     Duration = (int)(QuantizeTick)
                 };
-                int minTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault()?.ValidRange.EndTick + 1 ?? -1;
+                int minTick = fs.SideLanes.EnumerateFrom(range.StartTick - 1).FirstOrDefault(p => p.ValidRange.EndTick <= range.StartTick)?.ValidRange.EndTick + 1 ?? -1;
                 int maxTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault(p => p.ValidRange.StartTick >= range.StartTick)?.ValidRange.StartTick - 1 ?? -1;
                 if ((minTick != -1 && range.StartTick < minTick) || (maxTick != -1 && range.EndTick > maxTick)) return null;
                 var lane = new Data.Track.SideLane() { ValidRange = range };
