@@ -1141,13 +1141,19 @@ namespace Yuzu.UI
                         .Finally(() =>
                         {
                             if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
+                            bool CanMerge(Data.Track.SurfaceLane first, Data.Track.SurfaceLane second)
+                            {
+                                if (first.Notes.Count == 0 || second.Notes.Count == 0) return true;
+                                return first.Notes.GetLast().TickRange.EndTick < second.Notes.GetFirst().TickRange.StartTick;
+                            }
+
                             IOperation op = new MoveLaneStepOperation(step, beforeTick, beforeOffset, step.Tick, step.LaneOffset);
                             if (step == lane.Points.GetFirst())
                             {
                                 // 終了位置が同じ他のレーンとマージ
                                 var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetLast())).ToList();
                                 // 対象が1つだけかつマージするレーンでノートが重複していない場合のみ
-                                if (mergeables.Count == 1 && mergeables.Single().Notes.GetLast().TickRange.EndTick < lane.Notes.GetFirst().TickRange.StartTick)
+                                if (mergeables.Count == 1 && CanMerge(mergeables.Single(), lane))
                                 {
                                     var mergeable = mergeables.Single();
                                     var ops = new IOperation[]
@@ -1165,7 +1171,7 @@ namespace Yuzu.UI
                                 // 開始位置が同じ他のレーンとマージ
                                 var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetFirst())).ToList();
                                 // 対象が1つだけかつマージするレーンでノートが重複していない場合のみ
-                                if (mergeables.Count == 1 && lane.Notes.GetLast().TickRange.EndTick < mergeables.Single().Notes.GetFirst().TickRange.StartTick)
+                                if (mergeables.Count == 1 && CanMerge(lane, mergeables.Single()))
                                 {
                                     var mergeable = mergeables.Single();
                                     var ops = new IOperation[]
