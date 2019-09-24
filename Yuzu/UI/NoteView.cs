@@ -1885,12 +1885,18 @@ namespace Yuzu.UI
                             {
                                 int afterStart = end;
                                 int afterDuration = lane.ValidRange.EndTick - afterStart;
-                                op = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, afterStart, afterDuration);
+                                var changeOp = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, afterStart, afterDuration);
+                                var ops = lane.Notes.EnumerateFrom(begin).TakeWhile(q => q.TickRange.StartTick < end).Select(q => new RemoveNoteOperation(q, lane.Notes))
+                                    .Cast<IOperation>().Concat(new[] { changeOp });
+                                op = new CompositeOperation(changeOp.Description, ops.ToArray());
                             }
                             else if (end == lane.ValidRange.EndTick)
                             {
                                 int afterDuration = begin - lane.ValidRange.StartTick;
-                                op = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, lane.ValidRange.StartTick, afterDuration);
+                                var changeOp = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, lane.ValidRange.StartTick, afterDuration);
+                                var ops = lane.Notes.EnumerateFrom(begin).SkipWhile(q => q.TickRange.StartTick < begin).Select(q => new RemoveNoteOperation(q, lane.Notes))
+                                    .Cast<IOperation>().Concat(new[] { changeOp });
+                                op = new CompositeOperation(changeOp.Description, ops.ToArray());
                             }
                             else
                             {
