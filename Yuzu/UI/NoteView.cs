@@ -1141,13 +1141,19 @@ namespace Yuzu.UI
                         .Finally(() =>
                         {
                             if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
+                            bool CanMerge(Data.Track.SurfaceLane first, Data.Track.SurfaceLane second)
+                            {
+                                if (first.Notes.Count == 0 || second.Notes.Count == 0) return true;
+                                return first.Notes.GetLast().TickRange.EndTick < second.Notes.GetFirst().TickRange.StartTick;
+                            }
+
                             IOperation op = new MoveLaneStepOperation(step, beforeTick, beforeOffset, step.Tick, step.LaneOffset);
                             if (step == lane.Points.GetFirst())
                             {
                                 // 終了位置が同じ他のレーンとマージ
                                 var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetLast())).ToList();
                                 // 対象が1つだけかつマージするレーンでノートが重複していない場合のみ
-                                if (mergeables.Count == 1 && mergeables.Single().Notes.GetLast().TickRange.EndTick < lane.Notes.GetFirst().TickRange.StartTick)
+                                if (mergeables.Count == 1 && CanMerge(mergeables.Single(), lane))
                                 {
                                     var mergeable = mergeables.Single();
                                     var ops = new IOperation[]
@@ -1165,7 +1171,7 @@ namespace Yuzu.UI
                                 // 開始位置が同じ他のレーンとマージ
                                 var mergeables = Score.SurfaceLanes.Where(p => lane.LaneColor == p.LaneColor && step.Equals(p.Points.GetFirst())).ToList();
                                 // 対象が1つだけかつマージするレーンでノートが重複していない場合のみ
-                                if (mergeables.Count == 1 && lane.Notes.GetLast().TickRange.EndTick < mergeables.Single().Notes.GetFirst().TickRange.StartTick)
+                                if (mergeables.Count == 1 && CanMerge(lane, mergeables.Single()))
                                 {
                                     var mergeable = mergeables.Single();
                                     var ops = new IOperation[]
@@ -1312,7 +1318,7 @@ namespace Yuzu.UI
                     StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
                     Duration = (int)(QuantizeTick)
                 };
-                int minTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault()?.ValidRange.EndTick + 1 ?? -1;
+                int minTick = fs.SideLanes.EnumerateFrom(range.StartTick - 1).FirstOrDefault(p => p.ValidRange.EndTick <= range.StartTick)?.ValidRange.EndTick + 1 ?? -1;
                 int maxTick = fs.SideLanes.EnumerateFrom(range.StartTick).FirstOrDefault(p => p.ValidRange.StartTick >= range.StartTick)?.ValidRange.StartTick - 1 ?? -1;
                 if ((minTick != -1 && range.StartTick < minTick) || (maxTick != -1 && range.EndTick > maxTick)) return null;
                 var lane = new Data.Track.SideLane() { ValidRange = range };
@@ -1879,12 +1885,18 @@ namespace Yuzu.UI
                             {
                                 int afterStart = end;
                                 int afterDuration = lane.ValidRange.EndTick - afterStart;
-                                op = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, afterStart, afterDuration);
+                                var changeOp = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, afterStart, afterDuration);
+                                var ops = lane.Notes.EnumerateFrom(begin).TakeWhile(q => q.TickRange.StartTick < end).Select(q => new RemoveNoteOperation(q, lane.Notes))
+                                    .Cast<IOperation>().Concat(new[] { changeOp });
+                                op = new CompositeOperation(changeOp.Description, ops.ToArray());
                             }
                             else if (end == lane.ValidRange.EndTick)
                             {
                                 int afterDuration = begin - lane.ValidRange.StartTick;
-                                op = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, lane.ValidRange.StartTick, afterDuration);
+                                var changeOp = new ChangeSideLaneGuideRangeOperation(lane, lane.ValidRange.StartTick, lane.ValidRange.Duration, lane.ValidRange.StartTick, afterDuration);
+                                var ops = lane.Notes.EnumerateFrom(begin).SkipWhile(q => q.TickRange.StartTick < begin).Select(q => new RemoveNoteOperation(q, lane.Notes))
+                                    .Cast<IOperation>().Concat(new[] { changeOp });
+                                op = new CompositeOperation(changeOp.Description, ops.ToArray());
                             }
                             else
                             {
