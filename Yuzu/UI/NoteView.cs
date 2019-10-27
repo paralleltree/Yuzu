@@ -620,7 +620,10 @@ namespace Yuzu.UI
                 using (var pen = new Pen(lineColor, 2))
                 {
                     foreach (var points in guidePoints)
+                    {
+                        if (points.Length < 2) continue;
                         dc.Graphics.DrawLines(pen, points);
+                    }
                 }
                 e.Graphics.SmoothingMode = SmoothingMode.Default;
 
