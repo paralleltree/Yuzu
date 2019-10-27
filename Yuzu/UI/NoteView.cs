@@ -1408,6 +1408,8 @@ namespace Yuzu.UI
                         StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
                         Duration = NewNoteType == NewNoteType.Tap ? 0 : (int)(QuantizeTick)
                     };
+                    var prev = lane.Notes.EnumerateFrom(range.StartTick).FirstOrDefault();
+                    if (prev != null && range.StartTick <= prev.TickRange.EndTick && range.StartTick >= prev.TickRange.StartTick) return null;
                     (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
                     minTick = minTick == -1 ? lane.ValidRange.StartTick : minTick + 1;
                     maxTick = maxTick == -1 ? lane.ValidRange.EndTick : maxTick - 1;
@@ -1489,6 +1491,8 @@ namespace Yuzu.UI
                     StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
                     Duration = NewNoteType == NewNoteType.Tap ? 0 : (int)QuantizeTick
                 };
+                var prev = lane.Notes.EnumerateFrom(range.StartTick).FirstOrDefault();
+                if (prev != null && range.StartTick <= prev.TickRange.EndTick && range.StartTick >= prev.TickRange.StartTick) return null;
                 (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
                 minTick = minTick == -1 ? lane.Points.GetFirst().Tick : minTick + 1;
                 maxTick = maxTick == -1 ? lane.Points.GetLast().Tick : maxTick - 1;
