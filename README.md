@@ -47,3 +47,4 @@ All trademarks and other registered names contained in the BASS package are the 
 
 ## Special Thanks
   * [@kb10uy](https://twitter.com/kb10uy)
+  * [@huto_beat](https://twitter.com/huto_beat)
