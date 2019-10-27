@@ -933,7 +933,7 @@ namespace Yuzu.UI
                     {
                         case EditTarget.Field:
                         case EditTarget.Lane:
-                            foreach (var lane in surfaceLanes)
+                            foreach (var lane in surfaceLanes.Where(q => q.Points.Count > 1))
                             {
                                 var subscription = MoveSurfaceLaneStep(lane, pos, tailTick);
                                 if (subscription != null) return subscription;
@@ -1648,7 +1648,7 @@ namespace Yuzu.UI
                         }
                         else
                         {
-                            foreach (var lane in Score.SurfaceLanes)
+                            foreach (var lane in Score.SurfaceLanes.Where(p => p.Points.Count > 1))
                             {
                                 var op = RemoveSurfaceLaneStep(lane, clicked, tailTick);
                                 if (op != null) return op;
