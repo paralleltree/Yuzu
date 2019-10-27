@@ -620,7 +620,10 @@ namespace Yuzu.UI
                 using (var pen = new Pen(lineColor, 2))
                 {
                     foreach (var points in guidePoints)
+                    {
+                        if (points.Length < 2) continue;
                         dc.Graphics.DrawLines(pen, points);
+                    }
                 }
                 e.Graphics.SmoothingMode = SmoothingMode.Default;
 
@@ -1143,6 +1146,7 @@ namespace Yuzu.UI
                             if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
                             bool CanMerge(Data.Track.SurfaceLane first, Data.Track.SurfaceLane second)
                             {
+                                if (first.Points.Count == 1 || second.Points.Count == 1) return false;
                                 if (first.Notes.Count == 0 || second.Notes.Count == 0) return true;
                                 return first.Notes.GetLast().TickRange.EndTick < second.Notes.GetFirst().TickRange.StartTick;
                             }
@@ -1408,6 +1412,8 @@ namespace Yuzu.UI
                         StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
                         Duration = NewNoteType == NewNoteType.Tap ? 0 : (int)(QuantizeTick)
                     };
+                    var prev = lane.Notes.EnumerateFrom(range.StartTick).FirstOrDefault();
+                    if (prev != null && range.StartTick <= prev.TickRange.EndTick && range.StartTick >= prev.TickRange.StartTick) return null;
                     (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
                     minTick = minTick == -1 ? lane.ValidRange.StartTick : minTick + 1;
                     maxTick = maxTick == -1 ? lane.ValidRange.EndTick : maxTick - 1;
@@ -1489,6 +1495,8 @@ namespace Yuzu.UI
                     StartTick = GetQuantizedTick(GetTickFromYPosition(clicked.Y)),
                     Duration = NewNoteType == NewNoteType.Tap ? 0 : (int)QuantizeTick
                 };
+                var prev = lane.Notes.EnumerateFrom(range.StartTick).FirstOrDefault();
+                if (prev != null && range.StartTick <= prev.TickRange.EndTick && range.StartTick >= prev.TickRange.StartTick) return null;
                 (int minTick, int maxTick) = GetAroundNoteTick(lane.Notes, range.StartTick);
                 minTick = minTick == -1 ? lane.Points.GetFirst().Tick : minTick + 1;
                 maxTick = maxTick == -1 ? lane.Points.GetLast().Tick : maxTick - 1;
