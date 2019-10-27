@@ -8,7 +8,7 @@
 今後実装予定の項目については[Projects](https://github.com/paralleltree/Yuzu/projects)を参照してください。
 
 ## ダウンロード
-現在の最新版は[v0.4.1](https://github.com/paralleltree/Yuzu/releases)です。
+現在の最新版は[v0.4.2](https://github.com/paralleltree/Yuzu/releases)です。
 
 ## 使い方
 [Wiki](https://github.com/paralleltree/Yuzu/wiki)を参照してください。
@@ -47,3 +47,4 @@ All trademarks and other registered names contained in the BASS package are the 
 
 ## Special Thanks
   * [@kb10uy](https://twitter.com/kb10uy)
+  * [@huto_beat](https://twitter.com/huto_beat)
