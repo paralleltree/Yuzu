@@ -1146,6 +1146,7 @@ namespace Yuzu.UI
                             if (beforeTick == step.Tick && beforeOffset == step.LaneOffset) return;
                             bool CanMerge(Data.Track.SurfaceLane first, Data.Track.SurfaceLane second)
                             {
+                                if (first.Points.Count == 1 || second.Points.Count == 1) return false;
                                 if (first.Notes.Count == 0 || second.Notes.Count == 0) return true;
                                 return first.Notes.GetLast().TickRange.EndTick < second.Notes.GetFirst().TickRange.StartTick;
                             }
