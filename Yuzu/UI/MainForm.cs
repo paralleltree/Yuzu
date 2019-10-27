@@ -549,6 +549,7 @@ namespace Yuzu.UI
                 catch (Exception ex)
                 {
                     Program.DumpExceptionTo(ex, "sound_exception.json");
+                    PreviewManager.Stop();
                 }
             }, (Shortcut)Keys.Space);
 
